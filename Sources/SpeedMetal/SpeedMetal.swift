@@ -6,16 +6,17 @@ struct ContentView: View {
             Image(systemName: "dumbbell")
                 .imageScale(.large)
                 .foregroundColor(.accentColor)
-            Text("Heavy Metal")
+            Text("Speed Metal")
         }
     }
 }
 
 @main
-struct HeavyMetal: App {
+struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
     }
 }
+
