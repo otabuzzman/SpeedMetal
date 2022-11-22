@@ -15,7 +15,7 @@ func matrix4x4_rotation(radians: Float, axis: vector_float3) -> matrix_float4x4 
     let st = sinf(radians)
     let ci = 1.0 - ct
     let x = axis.x, y = axis.y, z = axis.z
-    
+
     let r0 = ct + x * x * ci,     r1 = y * x * ci + z * st, r2 = z * x * ci - y * st
     let r3 = x * y * ci - z * st, r4 = ct + y * y * ci,     r5 = z * y * ci + x * st
     let r6 = x * z * ci + y * st, r7 = y * z * ci - x * st, r8 = ct + z * z * ci
