@@ -11,10 +11,10 @@ func matrix4x4_translation(_ tx: Float, _ ty: Float, _ tz: Float) -> matrix_floa
 
 func matrix4x4_rotation(radians: Float, axis: vector_float3) -> matrix_float4x4 {
     let axis = normalize(axis)
-    let ct = cosf(radians)
-    let st = sinf(radians)
-    let ci = 1.0 - ct
-    let x = axis.x, y = axis.y, z = axis.z
+    let ct   = cosf(radians)
+    let st   = sinf(radians)
+    let ci   = 1.0 - ct
+    let x    = axis.x, y = axis.y, z = axis.z
 
     let r0 = ct + x * x * ci,     r1 = y * x * ci + z * st, r2 = z * x * ci - y * st
     let r3 = x * y * ci - z * st, r4 = ct + y * y * ci,     r5 = z * y * ci + x * st

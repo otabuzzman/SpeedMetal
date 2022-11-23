@@ -1,14 +1,14 @@
 import simd
 
-let GEOMETRY_MASK_TRIANGLE = 1
-let GEOMETRY_MASK_SPHERE   = 2
-let GEOMETRY_MASK_LIGHT    = 4
+let GEOMETRY_MASK_TRIANGLE: UInt = 1
+let GEOMETRY_MASK_SPHERE: UInt   = 2
+let GEOMETRY_MASK_LIGHT: UInt    = 4
 
-let GEOMETRY_MASK_GEOMETRY = (GEOMETRY_MASK_TRIANGLE | GEOMETRY_MASK_SPHERE)
+let GEOMETRY_MASK_GEOMETRY: UInt = (GEOMETRY_MASK_TRIANGLE | GEOMETRY_MASK_SPHERE)
 
-let RAY_MASK_PRIMARY       = (GEOMETRY_MASK_GEOMETRY | GEOMETRY_MASK_LIGHT)
-let RAY_MASK_SHADOW        = GEOMETRY_MASK_GEOMETRY
-let RAY_MASK_SECONDARY     = GEOMETRY_MASK_GEOMETRY
+let RAY_MASK_PRIMARY: UInt       = (GEOMETRY_MASK_GEOMETRY | GEOMETRY_MASK_LIGHT)
+let RAY_MASK_SHADOW: UInt        = GEOMETRY_MASK_GEOMETRY
+let RAY_MASK_SECONDARY: UInt     = GEOMETRY_MASK_GEOMETRY
 
 struct packed_float3 {
     var x: Float
@@ -47,6 +47,6 @@ struct Sphere {
 }
 
 struct Triangle {
-    var normals: [vector_float3, vector_float3, vector_float3]
-    var colors:  [vector_float3, vector_float3, vector_float3]
+    var normals = Array(repeating: vector_float3(), count: 3)
+    var colors  = Array(repeating: vector_float3(), count: 3)
 }
