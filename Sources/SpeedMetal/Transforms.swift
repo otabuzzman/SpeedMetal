@@ -1,6 +1,6 @@
 import simd
 
-func matrix4x4_translation(tx: Float, ty: Float, tz: Float) -> matrix_float4x4 {
+func matrix4x4_translation(_ tx: Float, _ ty: Float, _ tz: Float) -> matrix_float4x4 {
     matrix_float4x4(rows: [
         [1, 0, 0, 0],
         [0, 1, 0, 0],
@@ -28,7 +28,7 @@ func matrix4x4_rotation(radians: Float, axis: vector_float3) -> matrix_float4x4 
     ])
 }
 
-func matrix4x4_scale(sx: Float, sy: Float, sz: Float) -> matrix_float4x4 {
+func matrix4x4_scale(_ sx: Float, _ sy: Float, _ sz: Float) -> matrix_float4x4 {
     matrix_float4x4(rows: [
         [sx, 0, 0, 0],
         [0, sy, 0, 0],
