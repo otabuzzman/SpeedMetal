@@ -76,11 +76,11 @@ class TriangleGeometry: Geometry {
 
         let device = self.device
 
-        indexBuffer            = device!.makeBuffer(bytes: sphereBuffer,   length: sphereBuffer.count*MemoryLayout<Sphere>.stride, options: options)!
-        vertexPositionBuffer   = device!.makeBuffer(bytes: vertices,  length: vertices.count*MemoryLayout<vector_float3>.stride, options: options)!
-        vertexNormalBuffer     = device!.makeBuffer(bytes: normals,   length: normals.count*MemoryLayout<vector_float3>.stride, options: options)!
-        vertexColorBuffer      = device!.makeBuffer(bytes: colors,    length: colors.count*MemoryLayout<vector_float3>.stride, options: options)!
-        perPrimitiveDataBuffer = device!.makeBuffer(bytes: triangles, length: triangles.count*MemoryLayout<Triangle>.stride, options: options)!
+        indexBuffer            = device!.makeBuffer(bytes: sphereBuffer, length: sphereBuffer.count*MemoryLayout<Sphere>.stride,    options: options)!
+        vertexPositionBuffer   = device!.makeBuffer(bytes: vertices,     length: vertices.count*MemoryLayout<vector_float3>.stride, options: options)!
+        vertexNormalBuffer     = device!.makeBuffer(bytes: normals,      length: normals.count*MemoryLayout<vector_float3>.stride,  options: options)!
+        vertexColorBuffer      = device!.makeBuffer(bytes: colors,       length: colors.count*MemoryLayout<vector_float3>.stride,   options: options)!
+        perPrimitiveDataBuffer = device!.makeBuffer(bytes: triangles,    length: triangles.count*MemoryLayout<Triangle>.stride,     options: options)!
 
         if !UIDevice.current.userInterfaceIdiom == .phone {
             indexBuffer.didModifyRange(0..<indexBuffer.count)
@@ -242,7 +242,7 @@ class SphereGeometry: Geometry {
             boundingBoxes.append(bounds)
         }
 
-        sphereBuffer      = device!.makeBuffer(bytes: spheres, length: spheres.count*MemoryLayout<Sphere>.stride, options: options)!
+        sphereBuffer      = device!.makeBuffer(bytes: spheres,       length: spheres.count*MemoryLayout<Sphere>.stride,      options: options)!
         boundingBoxBuffer = device!.makeBuffer(bytes: boundingBoxes, length: spheres.count*MemoryLayout<BoundingBox>.stride, options: options)!
 
 
