@@ -16,10 +16,10 @@ struct BoundingBox {
 }
 
 func getTriangleNormal(_ v0: vector_float3, _ v1: vector_float3, _ v2: vector_float3) -> vector_float3 {
-    let e1 = normalize(v1 - v0)
-    let e2 = normalize(v2 - v0)
+    let e1 = vector_normalize(v1 - v0)
+    let e2 = vector_normalize(v2 - v0)
 
-    return cross(e1, e2)
+    return vector_cross(e1, e2)
 }
 
 protocol Geometry {
