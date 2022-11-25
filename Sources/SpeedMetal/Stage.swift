@@ -16,10 +16,10 @@ struct BoundingBox {
 }
 
 func getTriangleNormal(_ v0: vector_float3, _ v1: vector_float3, _ v2: vector_float3) -> vector_float3 {
-    let e1 = vector_normalize(v1 - v0)
-    let e2 = vector_normalize(v2 - v0)
+    let e1 = simd_normalize(v1 - v0)
+    let e2 = simd_normalize(v2 - v0)
 
-    return vector_cross(e1, e2)
+    return simd_cross(e1, e2)
 }
 
 protocol Geometry {
@@ -288,14 +288,14 @@ class GeometryInstance: NSObject {
 class Stage {
     private(set) var device:      MTLDevice
     
-    private(set) var geometries = [Geometry]()
-    private(set) var instances  = [GeometryInstance]()
+    private(set) var geometries: NSMutableArray = []
+    private(set) var instances = [GeometryInstance]()
     private(set) var lightBuffer: MTLBuffer?
     private(set) var lightCount:  UInt = 0
 
-    private var cameraPosition: vector_float3
-    private var cameraTarget:   vector_float3
-    private var cameraUp:       vector_float3
+    private(set) var cameraPosition: vector_float3
+    private(set) var cameraTarget:   vector_float3
+    private(set) var cameraUp:       vector_float3
 
     private var lights = [AreaLight]()
 
@@ -417,7 +417,7 @@ class Stage {
     }
 
     func clear() -> Void {
-        geometries.removeAll()
+        geometries.removeAllObjects()
         instances.removeAll()
 
         lights.removeAll()
@@ -425,7 +425,7 @@ class Stage {
 
     func uploadToBuffers() -> Void {
         for geometry in geometries {
-            geometry.uploadToBuffers()
+            (geometry as! Geometry).uploadToBuffers()
         }
 
         lightBuffer = device.makeBuffer(
@@ -434,7 +434,7 @@ class Stage {
     }
 
     func addGeometry(mesh: Geometry) -> Void {
-        geometries.append(mesh)
+        geometries.adding(mesh)
     }
 
     func addInstance(instance: GeometryInstance) -> Void {
