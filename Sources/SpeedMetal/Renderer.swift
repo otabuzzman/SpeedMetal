@@ -134,9 +134,7 @@ protocol Renderer: MTKViewDelegate {
         let height = UInt(size.height)
 
         let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
-        let threadgroups          = MTLSizeMake((width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
-                                        (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height,
-                                        1)
+        let threadgroups          = MTLSizeMake((width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width, (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
         let computeEncoder = commandBuffer.computeCommandEncoder()
 
