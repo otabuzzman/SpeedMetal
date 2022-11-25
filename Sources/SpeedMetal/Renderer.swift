@@ -421,7 +421,7 @@ protocol Renderer: MTKViewDelegate {
                 argumentDescriptor.dataType = MTLDataTypePointer
             } else {
                 if resource.conforms(to: MTLTexture) {
-                    let texture = (MTLTexture) resource
+                    let texture = resource as! MTLTexture
 
                     argumentDescriptor.dataType    = MTLDataTypeTexture
                     argumentDescriptor.textureType = texture.textureType
@@ -443,7 +443,7 @@ protocol Renderer: MTKViewDelegate {
         let commandBuffer         = queue.commandBuffer()
         let commandEncoder        = commandBuffer.accelerationStructureCommandEncoder()
 
-        let compactedSizeBuffer   = device.newBufferWithLength(sizeof(UInt32) options: MTLResourceOptions.storageModeShared)
+        let compactedSizeBuffer   = device.newBufferWithLength(sizeof(UInt32), options: MTLResourceOptions.storageModeShared)
 
         commandEncoder.buildAccelerationStructure(accelerationStructure, descriptor: descriptor, scratchBuffer: scratchBuffer, scratchBufferOffset: 0)
         commandEncoder.writeCompactedAccelerationStructureSize(accelerationStructure, toBuffer:compactedSizeBuffer)
