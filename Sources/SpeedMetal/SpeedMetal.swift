@@ -2,9 +2,9 @@ import MetalKit
 import SwiftUI
 
 class SMView: MTKView {
-    var renderer: MUIRenderer!
+    var renderer: Renderer!
 
-    init() {
+    init(configure: (SMView) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice()
         else {
@@ -41,13 +41,13 @@ struct SpeedMetal: App {
         WindowGroup {
             CUIView() {
                 SMView() { this in
-                    let stage = Stage.newInstancedCornellBoxSceneWithDevice(device: this.device, useIntersectionFunctions: true)
+                    let stage = Stage.newInstancedCornellBoxSceneWithDevice(device: this.device!, useIntersectionFunctions: true)
+                    
+                    this.backgroundColor  = .black
+                    this.colorPixelFormat = .rgba16Float
 
-                    this.view.backgroundColor  = .black
-                    this.view.colorPixelFormat = .rgba16float
-
-                    this.renderer = Renderer(device: this.device, stage: stage)
-                    this.delegate = renderer
+                    this.renderer = Renderer(device: this.device!, stage: stage)
+                    this.delegate = this.renderer
                 }
             }
         }

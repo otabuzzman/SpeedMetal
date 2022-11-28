@@ -433,7 +433,7 @@ class Stage {
     }
 
     func addGeometry(mesh: Geometry) -> Void {
-        geometries.adding(mesh)
+        geometries.add(mesh)
     }
 
     func addInstance(instance: GeometryInstance) -> Void {

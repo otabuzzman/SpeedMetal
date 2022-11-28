@@ -65,7 +65,7 @@ class Renderer: NSObject, MTKViewDelegate {
         textureDescriptor.storageMode = .private
         textureDescriptor.usage       = .shaderWrite
 
-        if accumulationTargets.cont == 0 {
+        if accumulationTargets.count == 0 {
             accumulationTargets.append(device.makeTexture(descriptor: textureDescriptor)!)
             accumulationTargets.append(device.makeTexture(descriptor: textureDescriptor)!)
         } else {
@@ -196,7 +196,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     private func loadMetal() -> Void {
-        library = device.makeLibrary(fromResourcesWithSuffixes ["msl"])! // makeDefaultLibrary
+        library = try! device.makeLibrary(source: shadersMetal, options: nil)
         queue   = device.makeCommandQueue()!
     }
 
@@ -266,7 +266,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     private func createAccelerationStructures() -> Void {
-        var primitiveAccelerationStructures = [MTLAccelerationStructure]()
+        primitiveAccelerationStructures = []
 
         for i in 0..<stage.geometries.count {
             let mesh = stage.geometries[i] as! Geometry
@@ -278,7 +278,7 @@ class Renderer: NSObject, MTKViewDelegate {
             accelDescriptor.geometryDescriptors = [geometryDescriptor]
 
             let accelerationStructure = newAccelerationStructureWithDescriptor(accelDescriptor)
-            primitiveAccelerationStructures.append(accelerationStructure)
+            primitiveAccelerationStructures.add(accelerationStructure)
         }
 
         let instanceBuffer = device.makeBuffer(length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * stage.instances.count)
@@ -297,7 +297,7 @@ class Renderer: NSObject, MTKViewDelegate {
         }
 
         let accelDescriptor = MTLInstanceAccelerationStructureDescriptor()
-        accelDescriptor.instancedAccelerationStructures = primitiveAccelerationStructures
+        accelDescriptor.instancedAccelerationStructures = primitiveAccelerationStructures as? [any MTLAccelerationStructure]
         accelDescriptor.instanceCount                   = stage.instances.count
         accelDescriptor.instanceDescriptorBuffer        = instanceBuffer
 
@@ -456,7 +456,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
         commandBuffer!.waitUntilCompleted()
 
-        let compactedSize                  = compactedSizeBuffer!.contents().load(as: UInt.self)
+        let compactedSize                  = compactedSizeBuffer!.contents().load(as: UInt32.self)
         let compactedAccelerationStructure = device.makeAccelerationStructure(size: Int(compactedSize))
 
         commandBuffer  = queue!.makeCommandBuffer()
