@@ -1,13 +1,37 @@
+import MetalKit
 import SwiftUI
 
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "dumbbell")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Speed Metal")
+class SMView: MTKView {
+    var renderer: MUIRenderer!
+
+    init() {
+        guard
+            let device = MTLCreateSystemDefaultDevice()
+        else {
+            fatalError("no default GPU device available")
         }
+        super.init(frame: .zero, device: device)
+
+        configure(self)
+    }
+
+    required init(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+struct CUIView<Content>: UIViewRepresentable where Content: UIView {
+    var content: Content
+
+    public init(closure: () -> Content) {
+        content = closure()
+    }
+
+    public func makeUIView(context: Context) -> Content {
+        return content
+    }
+
+    public func updateUIView(_ uiView: Content, context: Context) {
     }
 }
 
@@ -15,7 +39,17 @@ struct ContentView: View {
 struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CUIView() {
+                SMView() { this in
+                    let stage = Stage.newInstancedCornellBoxSceneWithDevice(device: this.device, useIntersectionFunctions: true)
+
+                    this.view.backgroundColor  = .black
+                    this.view.colorPixelFormat = .rgba16float
+
+                    this.renderer = Renderer(device: this.device, stage: stage)
+                    this.delegate = renderer
+                }
+            }
         }
     }
 }

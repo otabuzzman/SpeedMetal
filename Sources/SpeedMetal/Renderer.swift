@@ -65,8 +65,12 @@ class Renderer: NSObject, MTKViewDelegate {
         textureDescriptor.storageMode = .private
         textureDescriptor.usage       = .shaderWrite
 
-        for i in 0..<2 {
-            accumulationTargets[i] = device.makeTexture(descriptor: textureDescriptor)!
+        if accumulationTargets.cont == 0 {
+            accumulationTargets.append(device.makeTexture(descriptor: textureDescriptor)!)
+            accumulationTargets.append(device.makeTexture(descriptor: textureDescriptor)!)
+        } else {
+            accumulationTargets[0] = device.makeTexture(descriptor: textureDescriptor)!
+            accumulationTargets[1] = device.makeTexture(descriptor: textureDescriptor)!
         }
 
         textureDescriptor.pixelFormat = .r32Uint
@@ -115,7 +119,7 @@ class Renderer: NSObject, MTKViewDelegate {
         uniforms.width           = UInt(size.width)
         uniforms.height          = UInt(size.height)
 
-        uniforms.frameIndex      = Int(frameIndex) + 1
+        uniforms.frameIndex      = frameIndex + 1
 
         uniforms.lightCount      = UInt(stage.lightCount)
 
@@ -192,7 +196,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     private func loadMetal() -> Void {
-        library = device.makeDefaultLibrary()!
+        library = device.makeLibrary(fromResourcesWithSuffixes ["msl"])! // makeDefaultLibrary
         queue   = device.makeCommandQueue()!
     }
 
@@ -301,7 +305,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     private func createPipelines() -> Void {
-        var useIntersectionFunctions = false
+        useIntersectionFunctions = false
 
         // Metal 3
         if #available(iOS 16, macOS 13, *) {

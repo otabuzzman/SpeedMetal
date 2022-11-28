@@ -204,7 +204,6 @@ class SphereGeometry: Geometry {
 
     private var sphereBuffer:           MTLBuffer?
     private var boundingBoxBuffer:      MTLBuffer?
-    private var perPrimitiveDataBuffer: MTLBuffer?
 
     private var spheres = [Sphere]()
 
