@@ -24,7 +24,7 @@ func getTriangleNormal(_ v0: vector_float3, _ v1: vector_float3, _ v2: vector_fl
 
 protocol Geometry {
     var device:                   MTLDevice { get }
-    var intersectionFunctionName: String  { get }
+    var intersectionFunctionName: String    { get }
 
     init(device: MTLDevice) // initWithDevice
 

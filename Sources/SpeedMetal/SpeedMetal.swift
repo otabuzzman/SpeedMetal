@@ -6,12 +6,13 @@ class SMView: MTKView {
 
     init(configure: (SMView) -> ()) {
         guard
-            let device = MTLCreateSystemDefaultDevice()
+            let device = MTLCreateSystemDefaultDevice(),
+            device.supportsFamily(.metal3)
         else {
-            fatalError("no default GPU device available")
+            fatalError("no Metal 3 capable GPU available")
         }
         super.init(frame: .zero, device: device)
-
+        
         configure(self)
     }
 
