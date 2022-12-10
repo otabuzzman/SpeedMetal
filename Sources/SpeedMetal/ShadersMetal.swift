@@ -260,19 +260,19 @@ BoundingBoxIntersection sphereIntersectionFunction(// Ray parameters passed to t
     unsigned int geometryIndex           [[geometry_intersection_function_table_offset]],
     // Custom resources bound to the intersection function table.
     device void *resources               [[buffer(0), function_constant(useResourcesBuffer)]]
-    #if SUPPORTS_METAL_3
+//    #if SUPPORTS_METAL_3
     ,const device void* perPrimitiveData [[primitive_data]]
-    #endif
+//    #endif
 )
 {
     Sphere sphere;
-#if SUPPORTS_METAL_3
+//#if SUPPORTS_METAL_3
     // Look up the resources for this piece of sphere geometry.
     if (usePerPrimitiveData) {
         // Per-primitive data points to data from the specified buffer as was configured in the MTLAccelerationStructureBoundingBoxGeometryDescriptor.
         sphere = *(const device Sphere*)perPrimitiveData;
     } else
-#endif
+//#endif
     {
         device SphereResources& sphereResources = *(device SphereResources *)((device char *)resources + resourcesStride * geometryIndex);
         // Get the actual sphere enclosed in this bounding box.
@@ -436,12 +436,12 @@ kernel void raytracingKernel(
                 Triangle triangle;
                 
                 float3 objectSpaceSurfaceNormal;
-#if SUPPORTS_METAL_3
+//#if SUPPORTS_METAL_3
                 if (usePerPrimitiveData) {
                     // Per-primitive data points to data from the specified buffer as was configured in the MTLAccelerationStructureTriangleGeometryDescriptor.
                     triangle = *(const device Triangle*)intersection.primitive_data;
                 } else
-#endif
+//#endif
                 {
                     // The ray hit a triangle. Look up the corresponding geometry's normal and UV buffers.
                     device TriangleResources & triangleResources = *(device TriangleResources *)((device char *)resources + resourcesStride * geometryIndex);
@@ -466,12 +466,12 @@ kernel void raytracingKernel(
             }
             else if (mask & GEOMETRY_MASK_SPHERE) {
                 Sphere sphere;
-#if SUPPORTS_METAL_3
+//#if SUPPORTS_METAL_3
                 if (usePerPrimitiveData) {
                     // Per-primitive data points to data from the specified buffer as was configured in the MTLAccelerationStructureBoundingBoxGeometryDescriptor.
                     sphere = *(const device Sphere*)intersection.primitive_data;
                 } else
-#endif
+//#endif
                 {
                     // The ray hit a sphere. Look up the corresponding sphere buffer.
                     device SphereResources & sphereResources = *(device SphereResources *)((device char *)resources + resourcesStride * geometryIndex);

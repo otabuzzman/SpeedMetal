@@ -66,20 +66,20 @@ class TriangleGeometry: Geometry {
         let device = self.device
 
         indexBuffer = device.makeBuffer(
-            bytes: indices,
-            length: indices.count * MemoryLayout<Sphere>.stride)!
+            bytes: &indices,
+            length: indices.count * MemoryLayout<UInt16>.size)!
         vertexPositionBuffer = device.makeBuffer(
-            bytes: vertices,
-            length: vertices.count * MemoryLayout<vector_float3>.stride)!
+            bytes: &vertices,
+            length: vertices.count * MemoryLayout<vector_float3>.size)!
         vertexNormalBuffer = device.makeBuffer(
-            bytes: normals,
-            length: normals.count * MemoryLayout<vector_float3>.stride)!
+            bytes: &normals,
+            length: normals.count * MemoryLayout<vector_float3>.size)!
         vertexColorBuffer = device.makeBuffer(
-            bytes: colors,
-            length: colors.count * MemoryLayout<vector_float3>.stride)!
+            bytes: &colors,
+            length: colors.count * MemoryLayout<vector_float3>.size)!
         perPrimitiveDataBuffer = device.makeBuffer(
-            bytes: triangles,
-            length: triangles.count * MemoryLayout<Triangle>.stride)!
+            bytes: &triangles,
+            length: triangles.count * MemoryLayout<Triangle>.size)!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -89,15 +89,13 @@ class TriangleGeometry: Geometry {
         descriptor.indexType   = .uint16
 
         descriptor.vertexBuffer  = vertexPositionBuffer
-        descriptor.vertexStride  = MemoryLayout<vector_float3>.stride
+        descriptor.vertexStride  = MemoryLayout<vector_float3>.size
         descriptor.triangleCount = indices.count / 3
 
         // Metal 3
-        if #available(iOS 16, macOS 13, *) {
-            descriptor.primitiveDataBuffer      = perPrimitiveDataBuffer
-            descriptor.primitiveDataStride      = MemoryLayout<Triangle>.stride
-            descriptor.primitiveDataElementSize = MemoryLayout<Triangle>.stride
-        }
+        descriptor.primitiveDataBuffer      = perPrimitiveDataBuffer
+        descriptor.primitiveDataStride      = MemoryLayout<Triangle>.size
+        descriptor.primitiveDataElementSize = MemoryLayout<Triangle>.size
 
         return descriptor
     }
@@ -235,11 +233,11 @@ class SphereGeometry: Geometry {
         }
 
         sphereBuffer = device.makeBuffer(
-            bytes: spheres,
-            length: spheres.count * MemoryLayout<Sphere>.stride)!
+            bytes: &spheres,
+            length: spheres.count * MemoryLayout<Sphere>.size)!
         boundingBoxBuffer = device.makeBuffer(
-            bytes: boundingBoxes,
-            length: spheres.count * MemoryLayout<BoundingBox>.stride)!
+            bytes: &boundingBoxes,
+            length: spheres.count * MemoryLayout<BoundingBox>.size)!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -249,11 +247,9 @@ class SphereGeometry: Geometry {
         descriptor.boundingBoxCount  = spheres.count
       
         // Metal 3
-        if #available(iOS 16, macOS 13, *) {
-            descriptor.primitiveDataBuffer      = sphereBuffer
-            descriptor.primitiveDataStride      = MemoryLayout<Sphere>.stride
-            descriptor.primitiveDataElementSize = MemoryLayout<Sphere>.stride
-        }
+        descriptor.primitiveDataBuffer      = sphereBuffer
+        descriptor.primitiveDataStride      = MemoryLayout<Sphere>.size
+        descriptor.primitiveDataElementSize = MemoryLayout<Sphere>.size
 
         return descriptor
     }
@@ -428,8 +424,8 @@ class Stage {
         }
 
         lightBuffer = device.makeBuffer(
-            bytes: lights,
-            length: lights.count * MemoryLayout<AreaLight>.stride)!
+            bytes: &lights,
+            length: lights.count * MemoryLayout<AreaLight>.size)!
     }
 
     func addGeometry(mesh: Geometry) -> Void {
