@@ -8,7 +8,7 @@ class Renderer: NSObject, MTKViewDelegate {
     private var stage:  Stage
     
     private let maxFramesInFlight   = 3
-    private let alignedUniformsSize = (MemoryLayout<Uniforms>.size + 255) & ~255
+    private let alignedUniformsSize = (MemoryLayout<Uniforms>.stride + 255) & ~255
 
     private var queue:   MTLCommandQueue?
     private var library: MTLLibrary?
@@ -34,9 +34,9 @@ class Renderer: NSObject, MTKViewDelegate {
     private var uniformBufferOffset      = 0
     private var uniformBufferIndex       = 0
 
-    private var frameIndex: UInt         = 0
+    private var frameIndex: UInt32       = 0
 
-    private var resourcesStride: UInt    = 0
+    private var resourcesStride: UInt32  = 0
     private var useIntersectionFunctions = false
     private var usePerPrimitiveData      = false
 
@@ -118,14 +118,14 @@ class Renderer: NSObject, MTKViewDelegate {
         uniforms.pointee.camera.right   *= imagePlaneWidth
         uniforms.pointee.camera.up      *= imagePlaneHeight
 
-        uniforms.pointee.width           = UInt(size.width)
-        uniforms.pointee.height          = UInt(size.height)
+        uniforms.pointee.width           = UInt32(size.width)
+        uniforms.pointee.height          = UInt32(size.height)
         
-        uniforms.pointee.frameIndex      = frameIndex
+        uniforms.pointee.frameIndex      = UInt32(frameIndex)
         frameIndex                      += 1
         
-        uniforms.pointee.lightCount      = stage.lightCount
-
+        uniforms.pointee.lightCount      = UInt32(stage.lightCount)
+        
         uniformBufferIndex       = (uniformBufferIndex + 1) % maxFramesInFlight
     }
 
@@ -146,9 +146,9 @@ class Renderer: NSObject, MTKViewDelegate {
         let threadgroups          = MTLSizeMake(
             (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
             (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
-
+        
         let computeEncoder = commandBuffer!.makeComputeCommandEncoder()
-
+        
         computeEncoder!.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
         if (!usePerPrimitiveData) {
             computeEncoder!.setBuffer(resourceBuffer, offset: 0, index: 1)
@@ -220,7 +220,7 @@ class Renderer: NSObject, MTKViewDelegate {
             let geometry = geometry as! Geometry
             // Metal 3
             if geometry.resources().count * MemoryLayout<UInt64>.size > resourcesStride {
-                    resourcesStride = UInt(geometry.resources().count * MemoryLayout<UInt64>.size)
+                    resourcesStride = UInt32(geometry.resources().count * MemoryLayout<UInt64>.size)
             }
         }
 
@@ -270,7 +270,7 @@ class Renderer: NSObject, MTKViewDelegate {
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
-        instanceBuffer = device.makeBuffer(length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.size * stage.instances.count)
+        instanceBuffer = device.makeBuffer(length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.stride * stage.instances.count)
 
         let instanceDescriptors = instanceBuffer!.contents().bindMemory(to: MTLAccelerationStructureInstanceDescriptor.self, capacity: stage.instances.count)
         for instanceIndex in 0..<stage.instances.count {
@@ -283,6 +283,7 @@ class Renderer: NSObject, MTKViewDelegate {
             instanceDescriptors[instanceIndex].intersectionFunctionTableOffset = 0
             instanceDescriptors[instanceIndex].mask                            = UInt32(instance.mask)
             instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform)
+    
         }
         
         let accelDescriptor = MTLInstanceAccelerationStructureDescriptor()
@@ -413,7 +414,7 @@ class Renderer: NSObject, MTKViewDelegate {
         var commandEncoder        = commandBuffer!.makeAccelerationStructureCommandEncoder()
 
         let compactedSizeBuffer   = device.makeBuffer(
-            length: MemoryLayout<UInt32>.size,
+            length: MemoryLayout<UInt32>.stride,
             options: .storageModeShared)
 
         commandEncoder!.build(
@@ -433,7 +434,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
         let compactedSize                  = compactedSizeBuffer!.contents().load(as: UInt32.self)
         let compactedAccelerationStructure = device.makeAccelerationStructure(size: Int(compactedSize))
-
+        
         commandBuffer  = queue!.makeCommandBuffer()
         commandEncoder = commandBuffer!.makeAccelerationStructureCommandEncoder()
         commandEncoder!.copyAndCompact(

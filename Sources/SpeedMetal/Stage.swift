@@ -67,19 +67,19 @@ class TriangleGeometry: Geometry {
 
         indexBuffer = device.makeBuffer(
             bytes: &indices,
-            length: indices.count * MemoryLayout<UInt16>.size)!
+            length: indices.count * MemoryLayout<UInt16>.stride)!
         vertexPositionBuffer = device.makeBuffer(
             bytes: &vertices,
-            length: vertices.count * MemoryLayout<vector_float3>.size)!
+            length: vertices.count * MemoryLayout<vector_float3>.stride)!
         vertexNormalBuffer = device.makeBuffer(
             bytes: &normals,
-            length: normals.count * MemoryLayout<vector_float3>.size)!
+            length: normals.count * MemoryLayout<vector_float3>.stride)!
         vertexColorBuffer = device.makeBuffer(
             bytes: &colors,
-            length: colors.count * MemoryLayout<vector_float3>.size)!
+            length: colors.count * MemoryLayout<vector_float3>.stride)!
         perPrimitiveDataBuffer = device.makeBuffer(
             bytes: &triangles,
-            length: triangles.count * MemoryLayout<Triangle>.size)!
+            length: triangles.count * MemoryLayout<Triangle>.stride)!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -89,13 +89,13 @@ class TriangleGeometry: Geometry {
         descriptor.indexType   = .uint16
 
         descriptor.vertexBuffer  = vertexPositionBuffer
-        descriptor.vertexStride  = MemoryLayout<vector_float3>.size
+        descriptor.vertexStride  = MemoryLayout<vector_float3>.stride
         descriptor.triangleCount = indices.count / 3
 
         // Metal 3
         descriptor.primitiveDataBuffer      = perPrimitiveDataBuffer
-        descriptor.primitiveDataStride      = MemoryLayout<Triangle>.size
-        descriptor.primitiveDataElementSize = MemoryLayout<Triangle>.size
+        descriptor.primitiveDataStride      = MemoryLayout<Triangle>.stride
+        descriptor.primitiveDataElementSize = MemoryLayout<Triangle>.stride
 
         return descriptor
     }
@@ -185,12 +185,14 @@ class TriangleGeometry: Geometry {
         }
 
         for triangleIndex in 0..<2 {
-            var triangle = Triangle()
+            var n = [vector_float3]()
+            var c = [vector_float3]()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                triangle.normals[i] = normals[index]
-                triangle.colors[i]  = colors[index]
+                n.append(normals[index])
+                c.append(colors[index])
             }
+            let triangle = Triangle(n0: n[0], n1: n[1], n2: n[2], c0: c[0], c1: c[1], c2: c[2])
             triangles.append(triangle)
         }
     }
@@ -234,10 +236,10 @@ class SphereGeometry: Geometry {
 
         sphereBuffer = device.makeBuffer(
             bytes: &spheres,
-            length: spheres.count * MemoryLayout<Sphere>.size)!
+            length: spheres.count * MemoryLayout<Sphere>.stride)!
         boundingBoxBuffer = device.makeBuffer(
             bytes: &boundingBoxes,
-            length: spheres.count * MemoryLayout<BoundingBox>.size)!
+            length: spheres.count * MemoryLayout<BoundingBox>.stride)!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -248,8 +250,8 @@ class SphereGeometry: Geometry {
       
         // Metal 3
         descriptor.primitiveDataBuffer      = sphereBuffer
-        descriptor.primitiveDataStride      = MemoryLayout<Sphere>.size
-        descriptor.primitiveDataElementSize = MemoryLayout<Sphere>.size
+        descriptor.primitiveDataStride      = MemoryLayout<Sphere>.stride
+        descriptor.primitiveDataElementSize = MemoryLayout<Sphere>.stride
 
         return descriptor
     }
@@ -260,10 +262,10 @@ class SphereGeometry: Geometry {
 
     func addSphereWithOrigin(origin: vector_float3, radius: Float, color: vector_float3) -> Void {
         let sphere = Sphere(
-            origin: packed_float3(x: origin.x, y: origin.y, z: origin.z),
             radiusSquared: radius * radius,
-            color: packed_float3(x: color.x, y: color.y, z: color.z),
-            radius: radius)
+            radius: radius,
+            origin:  vector_float3(origin.x, origin.y, origin.z),
+            color: vector_float3(color.x, color.y, color.z))
         spheres.append(sphere)
     }
 }
@@ -271,9 +273,9 @@ class SphereGeometry: Geometry {
 class GeometryInstance: NSObject {
     private(set) var geometry: Geometry
     private(set) var transform: matrix_float4x4
-    private(set) var mask: UInt
+    private(set) var mask: UInt32
 
-    init(geometry: Geometry, transform: matrix_float4x4, mask: UInt) { // initWithGeometry
+    init(geometry: Geometry, transform: matrix_float4x4, mask: UInt32) { // initWithGeometry
         self.geometry  = geometry
         self.transform = transform
         self.mask      = mask
@@ -286,7 +288,7 @@ class Stage {
     private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
     private(set) var lightBuffer: MTLBuffer?
-    private(set) var lightCount:  UInt = 0
+    private(set) var lightCount:  UInt32 = 0
 
     private(set) var cameraPosition: vector_float3
     private(set) var cameraTarget:   vector_float3
@@ -425,7 +427,7 @@ class Stage {
 
         lightBuffer = device.makeBuffer(
             bytes: &lights,
-            length: lights.count * MemoryLayout<AreaLight>.size)!
+            length: lights.count * MemoryLayout<AreaLight>.stride)!
     }
 
     func addGeometry(mesh: Geometry) -> Void {

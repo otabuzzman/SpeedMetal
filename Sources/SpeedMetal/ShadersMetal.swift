@@ -52,15 +52,19 @@ struct Uniforms {
 };
 
 struct Sphere {
-    packed_float3 origin;
     float radiusSquared;
-    packed_float3 color;
-    float radius;
+	float radius;
+	vector_float3 origin;
+    vector_float3 color;
 };
 
 struct Triangle {
-    vector_float3 normals[3];
-    vector_float3 colors[3];
+    vector_float3 n0;
+	vector_float3 n1;
+	vector_float3 n2;
+	vector_float3 c0;
+	vector_float3 c1;
+	vector_float3 c2;
 };
 
 #include <metal_stdlib>
@@ -280,6 +284,7 @@ BoundingBoxIntersection sphereIntersectionFunction(// Ray parameters passed to t
     }
     
     // Check for intersection between the ray and sphere mathematically.
+	
     float3 oc = origin - sphere.origin;
     
     float a = dot(direction, direction);
@@ -335,7 +340,7 @@ kernel void raytracingKernel(
     // may be different than the bounds of the texture. Test to make sure this thread
     // is referencing a pixel within the bounds of the texture.
     if (tid.x < uniforms.width && tid.y < uniforms.height) {
-        // The ray to cast.
+     // The ray to cast.
         ray ray;
         
         // Pixel coordinates for this thread.
@@ -446,20 +451,22 @@ kernel void raytracingKernel(
                     // The ray hit a triangle. Look up the corresponding geometry's normal and UV buffers.
                     device TriangleResources & triangleResources = *(device TriangleResources *)((device char *)resources + resourcesStride * geometryIndex);
                     
-                    triangle.normals[0] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 0]];
-                    triangle.normals[1] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 1]];
-                    triangle.normals[2] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 2]];
+                    triangle.n0 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 0]];
+                    triangle.n1 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 1]];
+                    triangle.n2 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 2]];
                     
-                    triangle.colors[0] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 0]];
-                    triangle.colors[1] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 1]];
-                    triangle.colors[2] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 2]];
+                    triangle.c0 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 0]];
+                    triangle.c1 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 1]];
+                    triangle.c2 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 2]];
                 }
                 
                 // Interpolate the vertex normal at the intersection point.
-                objectSpaceSurfaceNormal = interpolateVertexAttribute(triangle.normals, barycentric_coords);
+				float3 normals[] = {triangle.n0, triangle.n1, triangle.n2};
+                objectSpaceSurfaceNormal = interpolateVertexAttribute(normals, barycentric_coords);
                 
                 // Interpolate the vertex color at the intersection point.
-                surfaceColor = interpolateVertexAttribute(triangle.colors, barycentric_coords);
+				float3 colors[] = {triangle.c0, triangle.c1, triangle.c2};
+                surfaceColor = interpolateVertexAttribute(colors, barycentric_coords);
                 
                 // Transform the normal from object to world space.
                 worldSpaceSurfaceNormal = normalize(transformDirection(objectSpaceSurfaceNormal, objectToWorldSpaceTransform));
