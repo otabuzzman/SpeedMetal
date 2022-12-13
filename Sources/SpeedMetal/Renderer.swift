@@ -63,7 +63,7 @@ class Renderer: NSObject, MTKViewDelegate {
         textureDescriptor.width       = Int(size.width)
         textureDescriptor.height      = Int(size.height)
         textureDescriptor.storageMode = .shared
-        textureDescriptor.usage       = .shaderRead | .shaderWrite
+        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
 
         accumulationTargets = [
             device.makeTexture(descriptor: textureDescriptor)!,
@@ -150,7 +150,7 @@ class Renderer: NSObject, MTKViewDelegate {
         let computeEncoder = commandBuffer!.makeComputeCommandEncoder()
         
         computeEncoder!.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
-        if (!usePerPrimitiveData) {
+        if !usePerPrimitiveData {
             computeEncoder!.setBuffer(resourceBuffer, offset: 0, index: 1)
         }
         computeEncoder!.setBuffer(instanceBuffer, offset: 0, index: 2)

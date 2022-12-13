@@ -295,7 +295,9 @@ class Stage {
     private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
     private(set) var lightBuffer: MTLBuffer?
-    private(set) var lightCount:  UInt32 = 0
+    var lightCount:  UInt32 {
+        get { return UInt32(lights.count) }
+    }
 
     private(set) var cameraPosition: vector_float3
     private(set) var cameraTarget:   vector_float3
