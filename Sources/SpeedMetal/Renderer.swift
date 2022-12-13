@@ -62,8 +62,8 @@ class Renderer: NSObject, MTKViewDelegate {
         textureDescriptor.textureType = .type2D
         textureDescriptor.width       = Int(size.width)
         textureDescriptor.height      = Int(size.height)
-        textureDescriptor.storageMode = .private
-        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
+        textureDescriptor.storageMode = .shared
+        textureDescriptor.usage       = .shaderRead | .shaderWrite
 
         accumulationTargets = [
             device.makeTexture(descriptor: textureDescriptor)!,
@@ -210,7 +210,9 @@ class Renderer: NSObject, MTKViewDelegate {
 
     private func createBuffers() -> Void {
         let uniformBufferSize = alignedUniformsSize * maxFramesInFlight
-        uniformBuffer = device.makeBuffer(length: uniformBufferSize)
+        uniformBuffer = device.makeBuffer(
+            length: uniformBufferSize,
+            options: [.storageModeShared])
 
         stage.uploadToBuffers()
 
@@ -224,7 +226,9 @@ class Renderer: NSObject, MTKViewDelegate {
             }
         }
 
-        resourceBuffer = device.makeBuffer(length: Int(resourcesStride) * stage.geometries.count)!
+        resourceBuffer = device.makeBuffer(
+            length: Int(resourcesStride) * stage.geometries.count,
+            options: [.storageModeShared])!
 
         for geometryIndex in 0..<stage.geometries.count {
             let geometry = stage.geometries[geometryIndex] as! Geometry
@@ -270,7 +274,9 @@ class Renderer: NSObject, MTKViewDelegate {
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
-        instanceBuffer = device.makeBuffer(length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.stride * stage.instances.count)
+        instanceBuffer = device.makeBuffer(
+            length: MemoryLayout<MTLAccelerationStructureInstanceDescriptor>.stride * stage.instances.count,
+            options: [.storageModeShared])
 
         let instanceDescriptors = instanceBuffer!.contents().bindMemory(to: MTLAccelerationStructureInstanceDescriptor.self, capacity: stage.instances.count)
         for instanceIndex in 0..<stage.instances.count {

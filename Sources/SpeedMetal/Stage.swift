@@ -67,19 +67,24 @@ class TriangleGeometry: Geometry {
 
         indexBuffer = device.makeBuffer(
             bytes: &indices,
-            length: indices.count * MemoryLayout<UInt16>.stride)!
+            length: indices.count * MemoryLayout<UInt16>.stride,
+            options: [.storageModeShared])!
         vertexPositionBuffer = device.makeBuffer(
             bytes: &vertices,
-            length: vertices.count * MemoryLayout<vector_float3>.stride)!
+            length: vertices.count * MemoryLayout<vector_float3>.stride,
+            options: [.storageModeShared])!
         vertexNormalBuffer = device.makeBuffer(
             bytes: &normals,
-            length: normals.count * MemoryLayout<vector_float3>.stride)!
+            length: normals.count * MemoryLayout<vector_float3>.stride,
+            options: [.storageModeShared])!
         vertexColorBuffer = device.makeBuffer(
             bytes: &colors,
-            length: colors.count * MemoryLayout<vector_float3>.stride)!
+            length: colors.count * MemoryLayout<vector_float3>.stride,
+            options: [.storageModeShared])!
         perPrimitiveDataBuffer = device.makeBuffer(
             bytes: &triangles,
-            length: triangles.count * MemoryLayout<Triangle>.stride)!
+            length: triangles.count * MemoryLayout<Triangle>.stride,
+            options: [.storageModeShared])!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -236,10 +241,12 @@ class SphereGeometry: Geometry {
 
         sphereBuffer = device.makeBuffer(
             bytes: &spheres,
-            length: spheres.count * MemoryLayout<Sphere>.stride)!
+            length: spheres.count * MemoryLayout<Sphere>.stride,
+            options: [.storageModeShared])!
         boundingBoxBuffer = device.makeBuffer(
             bytes: &boundingBoxes,
-            length: spheres.count * MemoryLayout<BoundingBox>.stride)!
+            length: spheres.count * MemoryLayout<BoundingBox>.stride,
+            options: [.storageModeShared])!
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -427,7 +434,8 @@ class Stage {
 
         lightBuffer = device.makeBuffer(
             bytes: &lights,
-            length: lights.count * MemoryLayout<AreaLight>.stride)!
+            length: lights.count * MemoryLayout<AreaLight>.stride,
+            options: [.storageModeShared])!
     }
 
     func addGeometry(mesh: Geometry) -> Void {
