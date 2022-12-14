@@ -12,8 +12,8 @@ Abstract:
 The header that contains the types and enumeration constants that the Metal shaders and the C/Objective-C source share.
 */
 
-#define ShaderTypes_h
-#ifndef ShaderTypes_h
+// #define ShaderTypes_h
+// #ifndef ShaderTypes_h
 
 #include <simd/simd.h>
 
@@ -74,7 +74,7 @@ struct Triangle {
     vector_float3 colors[3];
 };
 
-#endif
+// #endif
 
 #include <metal_stdlib>
 #include <simd/simd.h>

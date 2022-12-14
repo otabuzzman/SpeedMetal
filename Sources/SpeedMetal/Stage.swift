@@ -26,7 +26,7 @@ protocol Geometry {
     var device:                   MTLDevice { get }
     var intersectionFunctionName: String    { get }
 
-    init(device: MTLDevice)
+    init(device: MTLDevice) // initWithDevice
 
     func clear()              -> Void
     func uploadToBuffers()    -> Void
@@ -68,23 +68,23 @@ class TriangleGeometry: Geometry {
         indexBuffer = device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
         vertexPositionBuffer = device.makeBuffer(
             bytes: &vertices,
             length: vertices.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
         vertexNormalBuffer = device.makeBuffer(
             bytes: &normals,
             length: normals.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
         vertexColorBuffer = device.makeBuffer(
             bytes: &colors,
             length: colors.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
         perPrimitiveDataBuffer = device.makeBuffer(
             bytes: &triangles,
             length: triangles.count * MemoryLayout<Triangle>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -242,11 +242,11 @@ class SphereGeometry: Geometry {
         sphereBuffer = device.makeBuffer(
             bytes: &spheres,
             length: spheres.count * MemoryLayout<Sphere>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
         boundingBoxBuffer = device.makeBuffer(
             bytes: &boundingBoxes,
             length: spheres.count * MemoryLayout<BoundingBox>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
     }
 
     func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -269,18 +269,18 @@ class SphereGeometry: Geometry {
 
     func addSphereWithOrigin(origin: vector_float3, radius: Float, color: vector_float3) -> Void {
         let sphere = Sphere(
+            origin:  MTLPackedFloat3(origin),
             radiusSquared: radius * radius,
-            radius: radius,
-            origin:  vector_float3(origin.x, origin.y, origin.z),
-            color: vector_float3(color.x, color.y, color.z))
+            color: MTLPackedFloat3(color),
+            radius: radius)
         spheres.append(sphere)
     }
 }
 
 class GeometryInstance: NSObject {
-    private(set) var geometry:  Geometry
+    private(set) var geometry: Geometry
     private(set) var transform: matrix_float4x4
-    private(set) var mask:      UInt32
+    private(set) var mask: UInt32
 
     init(geometry: Geometry, transform: matrix_float4x4, mask: UInt32) { // initWithGeometry
         self.geometry  = geometry
@@ -292,19 +292,18 @@ class GeometryInstance: NSObject {
 class Stage {
     private(set) var device:      MTLDevice
     
-    private(set) var geometries:  NSMutableArray = []
+    private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
-
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
-
+    
     private(set) var cameraPosition: vector_float3
     private(set) var cameraTarget:   vector_float3
     private(set) var cameraUp:       vector_float3
 
     private var lights = [AreaLight]()
 
-    init(device: MTLDevice) {
+    init(device: MTLDevice) { // initWithDevice
         self.device = device
 
         cameraPosition = vector3(0.0, 0.0, -1.0)
@@ -320,7 +319,7 @@ class Stage {
         stage.cameraUp       = vector3(0.0, 1.0, 0.0)
 
         let lightMesh = TriangleGeometry(device: device)
-        stage.addGeometry(mesh: lightMesh)
+        stage.addGeometry(geometry: lightMesh)
 
         var transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(0.5, 1.98, 0.5)
      
@@ -331,7 +330,7 @@ class Stage {
             inwardNormals: true)
 
         let geometryMesh = TriangleGeometry(device: device)
-        stage.addGeometry(mesh: geometryMesh)
+        stage.addGeometry(geometry: geometryMesh)
 
         transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(2.0, 2.0, 2.0)
 
@@ -376,7 +375,7 @@ class Stage {
                 radius: 0.3,
                 color: vector3(0.725, 0.71, 0.68))
 
-            stage.addGeometry(mesh: sphereGeometry!)
+            stage.addGeometry(geometry: sphereGeometry!)
         }
 
         // nine instances
@@ -388,33 +387,33 @@ class Stage {
                     geometry: lightMesh,
                     transform: transform,
                     mask: GEOMETRY_MASK_LIGHT)
-                stage.addInstance(instance: lightMeshInstance)
+                stage.addGeometryInstance(instance: lightMeshInstance)
 
                 let geometryMeshInstance = GeometryInstance(
                     geometry: geometryMesh,
                     transform: transform,
                     mask: GEOMETRY_MASK_TRIANGLE)
-                stage.addInstance(instance: geometryMeshInstance)
+                stage.addGeometryInstance(instance: geometryMeshInstance)
 
                 if (useIntersectionFunctions) {
                     let sphereGeometryInstance = GeometryInstance(
                         geometry: sphereGeometry!,
                         transform: transform,
                         mask: GEOMETRY_MASK_SPHERE)
-                    stage.addInstance(instance: sphereGeometryInstance)
+                    stage.addGeometryInstance(instance: sphereGeometryInstance)
                 }
 
                 let r = Float.random(in: 0.0..<1.0)
                 let g = Float.random(in: 0.0..<1.0)
                 let b = Float.random(in: 0.0..<1.0)
                 
-                let light = AreaLight(
+                let areaLight = AreaLight(
                     position: vector3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
                     forward: vector3(0.0, -1.0, 0.0),
                     right: vector3(0.25, 0.0, 0.0),
                     up: vector3(0.0, 0.0, 0.25),
                     color: vector3(r * 4.0, g * 4.0, b * 4.0))
-                stage.addLight(light: light)
+                stage.addLight(light: areaLight)
             }
         }
 
@@ -436,18 +435,25 @@ class Stage {
         lightBuffer = device.makeBuffer(
             bytes: &lights,
             length: lights.count * MemoryLayout<AreaLight>.stride,
-            options: [.storageModeShared])!
+            options: [.storageModeShared])
     }
 
-    func addGeometry(mesh: Geometry) -> Void {
-        geometries.add(mesh)
+    func addGeometry(geometry: Geometry) -> Void {
+        geometries.add(geometry)
     }
 
-    func addInstance(instance: GeometryInstance) -> Void {
+    func addGeometryInstance(instance: GeometryInstance) -> Void {
         instances.append(instance)
     }
 
     func addLight(light: AreaLight) -> Void {
         lights.append(light)
+    }
+}
+
+extension MTLPackedFloat3 {
+    init(_ vector: vector_float3) {
+        self.init()
+        self.elements = (vector[0], vector[1], vector[2])
     }
 }
