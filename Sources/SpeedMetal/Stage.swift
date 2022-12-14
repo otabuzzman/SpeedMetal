@@ -2,13 +2,13 @@ import MetalKit
 import simd
 
 let FACE_MASK_NONE: UInt = 0
-let FACE_MASK_NEGATIVE_X: UInt = (1 << 0)
-let FACE_MASK_POSITIVE_X: UInt = (1 << 1)
-let FACE_MASK_NEGATIVE_Y: UInt = (1 << 2)
-let FACE_MASK_POSITIVE_Y: UInt = (1 << 3)
-let FACE_MASK_NEGATIVE_Z: UInt = (1 << 4)
-let FACE_MASK_POSITIVE_Z: UInt = (1 << 5)
-let FACE_MASK_ALL: UInt = ((1 << 6) - 1)
+let FACE_MASK_NEGATIVE_X: UInt = 1 << 0
+let FACE_MASK_POSITIVE_X: UInt = 1 << 1
+let FACE_MASK_NEGATIVE_Y: UInt = 1 << 2
+let FACE_MASK_POSITIVE_Y: UInt = 1 << 3
+let FACE_MASK_NEGATIVE_Z: UInt = 1 << 4
+let FACE_MASK_POSITIVE_Z: UInt = 1 << 5
+let FACE_MASK_ALL: UInt = (1 << 6) - 1
 
 struct BoundingBox {
     var min = MTLPackedFloat3()
@@ -26,7 +26,7 @@ protocol Geometry {
     var device:                   MTLDevice { get }
     var intersectionFunctionName: String    { get }
 
-    init(device: MTLDevice) // initWithDevice
+    init(device: MTLDevice)
 
     func clear()              -> Void
     func uploadToBuffers()    -> Void
@@ -38,11 +38,11 @@ class TriangleGeometry: Geometry {
     var device:                    MTLDevice
     var intersectionFunctionName = ""
 
-    private var indexBuffer:            MTLBuffer?
-    private var vertexPositionBuffer:   MTLBuffer?
-    private var vertexNormalBuffer:     MTLBuffer?
-    private var vertexColorBuffer:      MTLBuffer?
-    private var perPrimitiveDataBuffer: MTLBuffer?
+    private var indexBuffer:            MTLBuffer!
+    private var vertexPositionBuffer:   MTLBuffer!
+    private var vertexNormalBuffer:     MTLBuffer!
+    private var vertexColorBuffer:      MTLBuffer!
+    private var perPrimitiveDataBuffer: MTLBuffer!
 
     private var indices   = [UInt16]()
     private var vertices  = [vector_float3]()
@@ -106,7 +106,7 @@ class TriangleGeometry: Geometry {
     }
 
     func resources() -> [MTLResource] {
-        [indexBuffer!, vertexNormalBuffer!, vertexColorBuffer!]
+        [indexBuffer, vertexNormalBuffer, vertexColorBuffer]
     }
 
     func addCubeWithFaces(faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
@@ -127,7 +127,7 @@ class TriangleGeometry: Geometry {
             var transformedVertex = vector_float4(vertex.x, vertex.y, vertex.z, 1.0)
             transformedVertex     = transform * transformedVertex
 
-            cubeVertices[i] = transformedVertex.xyz
+            cubeVertices[i] = simd_make_float3(transformedVertex)
         }
 
         let cubeIndices: [[UInt16]] = [
@@ -190,14 +190,14 @@ class TriangleGeometry: Geometry {
         }
 
         for triangleIndex in 0..<2 {
-            var n = [vector_float3]()
-            var c = [vector_float3]()
+            var n = [MTLPackedFloat3]()
+            var c = [MTLPackedFloat3]()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                n.append(normals[index])
-                c.append(colors[index])
+                n.append(MTLPackedFloat3(normals[index]))
+                c.append(MTLPackedFloat3(colors[index]))
             }
-            let triangle = Triangle(n0: n[0], n1: n[1], n2: n[2], c0: c[0], c1: c[1], c2: c[2])
+            let triangle = Triangle(normals: (n[0], n[1], n[2]), colors: (c[0], c[1], c[2]))
             triangles.append(triangle)
         }
     }
@@ -207,8 +207,8 @@ class SphereGeometry: Geometry {
     var device:                    MTLDevice
     var intersectionFunctionName = "sphereIntersectionFunction"
 
-    private var sphereBuffer:           MTLBuffer?
-    private var boundingBoxBuffer:      MTLBuffer?
+    private var sphereBuffer:           MTLBuffer!
+    private var boundingBoxBuffer:      MTLBuffer!
 
     private var spheres = [Sphere]()
 
@@ -264,7 +264,7 @@ class SphereGeometry: Geometry {
     }
 
     func resources() -> [MTLResource] {
-        [sphereBuffer!]
+        [sphereBuffer]
     }
 
     func addSphereWithOrigin(origin: vector_float3, radius: Float, color: vector_float3) -> Void {
@@ -278,9 +278,9 @@ class SphereGeometry: Geometry {
 }
 
 class GeometryInstance: NSObject {
-    private(set) var geometry: Geometry
+    private(set) var geometry:  Geometry
     private(set) var transform: matrix_float4x4
-    private(set) var mask: UInt32
+    private(set) var mask:      UInt32
 
     init(geometry: Geometry, transform: matrix_float4x4, mask: UInt32) { // initWithGeometry
         self.geometry  = geometry
@@ -292,12 +292,11 @@ class GeometryInstance: NSObject {
 class Stage {
     private(set) var device:      MTLDevice
     
-    private(set) var geometries: NSMutableArray = []
+    private(set) var geometries:  NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
-    private(set) var lightBuffer: MTLBuffer?
-    var lightCount:  UInt32 {
-        get { return UInt32(lights.count) }
-    }
+
+    private(set) var lightBuffer: MTLBuffer!
+    var lightCount: UInt32 { UInt32(lights.count) }
 
     private(set) var cameraPosition: vector_float3
     private(set) var cameraTarget:   vector_float3
@@ -305,7 +304,7 @@ class Stage {
 
     private var lights = [AreaLight]()
 
-    init(device: MTLDevice) { // initWithDevice
+    init(device: MTLDevice) {
         self.device = device
 
         cameraPosition = vector3(0.0, 0.0, -1.0)
@@ -450,11 +449,5 @@ class Stage {
 
     func addLight(light: AreaLight) -> Void {
         lights.append(light)
-    }
-}
-
-extension vector_float4 {
-    var xyz: vector_float3 {
-        vector_float3(x, y, z)
     }
 }
