@@ -287,8 +287,8 @@ class GeometryInstance: NSObject {
 
 enum InstancesGrid {
     case oneByOne
-    case fourByFour
-    case nineByNine
+    case twoByTwo
+    case threeByThree
 }
 
 class Stage {
@@ -311,41 +311,6 @@ class Stage {
 
     class func hoistCornellBox(device: MTLDevice, instancesGrid grid: InstancesGrid = .oneByOne) -> Stage {
         let stage = Stage(device: device)
-        let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
-            transform = matrix4x4_translation(Float(x) * 2.5, Float(y) * 2.5, 0.0)
-
-            let lightMeshInstance = GeometryInstance(
-                geometry: lightMesh,
-                transform: transform,
-                mask: GEOMETRY_MASK_LIGHT)
-            stage.addGeometryInstance(instance: lightMeshInstance)
-
-            let geometryMeshInstance = GeometryInstance(
-                geometry: geometryMesh,
-                transform: transform,
-                mask: GEOMETRY_MASK_TRIANGLE)
-            stage.addGeometryInstance(instance: geometryMeshInstance)
-
-            if (useIntersectionFunctions) {
-                let sphereGeometryInstance = GeometryInstance(
-                    geometry: sphereGeometry!,
-                    transform: transform,
-                    mask: GEOMETRY_MASK_SPHERE)
-                stage.addGeometryInstance(instance: sphereGeometryInstance)
-            }
-
-            let r = Float.random(in: 0.0..<1.0)
-            let g = Float.random(in: 0.0..<1.0)
-            let b = Float.random(in: 0.0..<1.0)
-
-            let areaLight = AreaLight(
-                position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
-                forward: vector_float3(0.0, -1.0, 0.0),
-                right: vector_float3(0.25, 0.0, 0.0),
-                up: vector_float3(0.0, 0.0, 0.25),
-                color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
-            stage.addLight(light: areaLight)
-        }
 
         stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
         stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
@@ -392,28 +357,62 @@ class Stage {
             inwardNormals: false)
 
         let sphereGeometry = SphereGeometry(device: device)
-        stage.addGeometry(geometry: sphereGeometry!)
+        stage.addGeometry(geometry: sphereGeometry)
 
         sphereGeometry.addSphere(
             withOrigin: vector_float3(0.3275, 0.3, 0.3725),
             radius: 0.3,
             color: vector_float3(0.725, 0.71, 0.68))
 
-		switch grid {
-			case .oneByOne:
-				hoistInstances(0.0, 0.0)
-			case .fourByFour:
-				hoistInstances(-0.5, -0.5)
-				hoistInstances( 0.5, -0.5)
-				hoistInstances(-0.5,  0.5)
-				hoistInstances( 0.5,  0.5)
-			case .nineByNine:
-				for y in -1...1 {
-					for x in -1...1 {
-						hoistInstances(x, y)
-					}
-				}
-		}
+        let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
+            transform = matrix4x4_translation(Float(x) * 2.5, Float(y) * 2.5, 0.0)
+            
+            let lightMeshInstance = GeometryInstance(
+                geometry: lightMesh,
+                transform: transform,
+                mask: GEOMETRY_MASK_LIGHT)
+            stage.addGeometryInstance(instance: lightMeshInstance)
+            
+            let geometryMeshInstance = GeometryInstance(
+                geometry: geometryMesh,
+                transform: transform,
+                mask: GEOMETRY_MASK_TRIANGLE)
+            stage.addGeometryInstance(instance: geometryMeshInstance)
+            
+            let sphereGeometryInstance = GeometryInstance(
+                geometry: sphereGeometry,
+                transform: transform,
+                mask: GEOMETRY_MASK_SPHERE)
+            stage.addGeometryInstance(instance: sphereGeometryInstance)
+            
+            let r = Float.random(in: 0.0..<1.0)
+            let g = Float.random(in: 0.0..<1.0)
+            let b = Float.random(in: 0.0..<1.0)
+            
+            let areaLight = AreaLight(
+                position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
+                forward: vector_float3(0.0, -1.0, 0.0),
+                right: vector_float3(0.25, 0.0, 0.0),
+                up: vector_float3(0.0, 0.0, 0.25),
+                color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
+            stage.addLight(light: areaLight)
+        }
+
+        switch grid {
+            case .oneByOne:
+                hoistInstances(0.0, 0.0)
+        case .twoByTwo:
+                hoistInstances(-0.5, -0.5)
+                hoistInstances( 0.5, -0.5)
+                hoistInstances(-0.5,  0.5)
+                hoistInstances( 0.5,  0.5)
+        case .threeByThree:
+                for y in -1...1 {
+                    for x in -1...1 {
+                        hoistInstances(Float(x), Float(y))
+                    }
+                }
+        }
 
         return stage
     }
