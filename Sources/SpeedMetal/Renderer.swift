@@ -6,7 +6,7 @@ import simd
 class Renderer: NSObject, MTKViewDelegate {
     private var device: MTLDevice
     private var stage:  Stage
-    
+
     private let maxFramesInFlight   = 3
     private let alignedUniformsSize = (MemoryLayout<Uniforms>.stride + 255) & ~255
 
@@ -32,7 +32,7 @@ class Renderer: NSObject, MTKViewDelegate {
     private var maxFramesSignal: DispatchSemaphore
     private var frameSize: CGSize        = .zero
     private var frameIndex: UInt32       = 0
-    
+
     private var uniformBufferOffset      = 0
     private var uniformBufferIndex       = 0
 
@@ -56,7 +56,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
         self.frameSize = size
-        
+
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
         textureDescriptor.textureType = .type2D
@@ -71,15 +71,15 @@ class Renderer: NSObject, MTKViewDelegate {
         ]
 
         var randomValues = [UInt32](repeating: 0, count: Int(size.width * size.height))
-        
+
         for i in 0..<Int(size.width * size.height) {
             randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
         }
-        
+
         textureDescriptor.pixelFormat = .r32Uint
         textureDescriptor.storageMode = .shared
         textureDescriptor.usage       = .shaderRead
-        
+
         randomTexture = device.makeTexture(descriptor: textureDescriptor)!
         randomTexture.replace(
             region: MTLRegionMake2D(0, 0, Int(size.width), Int(size.height)),
@@ -92,11 +92,11 @@ class Renderer: NSObject, MTKViewDelegate {
 
     private func updateUniforms() -> Void {
         uniformBufferOffset = alignedUniformsSize * uniformBufferIndex
-        
+
         let uniforms = uniformBuffer.contents()
             .advanced(by: uniformBufferOffset)
             .bindMemory(to: Uniforms.self, capacity: 1)
-        
+
         let position = stage.cameraPosition
         let target   = stage.cameraTarget
         var up       = stage.cameraUp
@@ -120,25 +120,25 @@ class Renderer: NSObject, MTKViewDelegate {
 
         uniforms.pointee.width           = UInt32(frameSize.width)
         uniforms.pointee.height          = UInt32(frameSize.height)
-        
+
         uniforms.pointee.frameIndex      = frameIndex
         frameIndex                      += 1
-        
+
         uniforms.pointee.lightCount      = stage.lightCount
-        
+
         uniformBufferIndex       = (uniformBufferIndex + 1) % maxFramesInFlight
     }
 
     func draw(in view: MTKView) -> Void {
         maxFramesSignal.wait()
-        
+
         let commandBuffer = queue.makeCommandBuffer()
         commandBuffer!.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
         }
-        
+
         updateUniforms()
-        
+
         let width  = Int(frameSize.width)
         let height = Int(frameSize.height)
 
@@ -146,9 +146,9 @@ class Renderer: NSObject, MTKViewDelegate {
         let threadgroups          = MTLSizeMake(
             (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
             (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
-        
+
         let computeEncoder = commandBuffer!.makeComputeCommandEncoder()
-        
+
         computeEncoder!.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
         if !usePerPrimitiveData {
             computeEncoder!.setBuffer(resourceBuffer, offset: 0, index: 1)
@@ -179,7 +179,7 @@ class Renderer: NSObject, MTKViewDelegate {
         computeEncoder!.endEncoding()
 
         accumulationTargets.swapAt(0, 1)
-        
+
         if let currentDrawable = view.currentDrawable {
             let renderPassDescriptor = MTLRenderPassDescriptor()
             renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
@@ -203,7 +203,7 @@ class Renderer: NSObject, MTKViewDelegate {
     private func loadMetal() -> Void {
         let compileOptions = MTLCompileOptions()
         compileOptions.languageVersion = .version3_0
-        
+
         library = try! device.makeLibrary(source: shadersMetal, options: compileOptions)
         queue   = device.makeCommandQueue()!
     }
@@ -220,10 +220,10 @@ class Renderer: NSObject, MTKViewDelegate {
 
         for geometry in stage.geometries {
             let geometry = geometry as! Geometry
-            
+
             // Metal 3
             if geometry.resources().count * MemoryLayout<UInt64>.size > resourcesStride {
-                    resourcesStride = UInt32(geometry.resources().count * MemoryLayout<UInt64>.size)
+                resourcesStride = UInt32(geometry.resources().count * MemoryLayout<UInt64>.size)
             }
         }
 
@@ -236,21 +236,21 @@ class Renderer: NSObject, MTKViewDelegate {
 
             // Metal 3
             let resources       = geometry.resources()
-            let resourceHandles = resourceBuffer.contents() + Int(resourcesStride) * geometryIndex
-                
-            for argumentIndex in 0..<resources.count {
-                let resource = resources[argumentIndex]
+            let resourceHandles = resourceBuffer.contents().advanced(by: Int(resourcesStride) * geometryIndex)
+
+            for resourceIndex in 0..<resources.count {
+                let resource = resources[resourceIndex]
 
                 if resource.conforms(to: MTLBuffer.self) {
                     resourceHandles.storeBytes(
                         of: (resource as! MTLBuffer).gpuAddress,
-                        toByteOffset: argumentIndex * MemoryLayout<UInt64>.size,
+                        toByteOffset: resourceIndex * MemoryLayout<UInt64>.size,
                         as: UInt64.self)
                 } else {
                     if resource.conforms(to: MTLTexture.self) {
                         resourceHandles.storeBytes(
                             of: (resource as! MTLTexture).gpuResourceID,
-                            toByteOffset: argumentIndex * MemoryLayout<MTLResourceID>.size,
+                            toByteOffset: resourceIndex * MemoryLayout<MTLResourceID>.size,
                             as: MTLResourceID.self)
                     }
                 }
@@ -262,15 +262,15 @@ class Renderer: NSObject, MTKViewDelegate {
         primitiveAccelerationStructures = []
 
         for i in 0..<stage.geometries.count {
-            let mesh = stage.geometries[i] as! Geometry
+            let geometry = stage.geometries[i] as! Geometry
 
-            let geometryDescriptor = mesh.geometryDescriptor()
+            let geometryDescriptor = geometry.descriptor()
             geometryDescriptor.intersectionFunctionTableOffset = i
 
             let accelDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
             accelDescriptor.geometryDescriptors = [geometryDescriptor]
 
-            let accelerationStructure = newAccelerationStructureWithDescriptor(accelDescriptor)
+            let accelerationStructure = newAccelerationStructure(accelDescriptor)
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
@@ -281,23 +281,23 @@ class Renderer: NSObject, MTKViewDelegate {
         let instanceDescriptors = instanceBuffer.contents().bindMemory(to: MTLAccelerationStructureInstanceDescriptor.self, capacity: stage.instances.count)
         for instanceIndex in 0..<stage.instances.count {
             let instance = stage.instances[instanceIndex]
-            
+
             let geometryIndex = stage.geometries.index(of: instance.geometry)
-            
+
             instanceDescriptors[instanceIndex].accelerationStructureIndex      = UInt32(geometryIndex)
             instanceDescriptors[instanceIndex].options                         = instance.geometry.intersectionFunctionName.isEmpty ? .opaque : .nonOpaque
             instanceDescriptors[instanceIndex].intersectionFunctionTableOffset = 0
             instanceDescriptors[instanceIndex].mask                            = UInt32(instance.mask)
             instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform)
-    
+
         }
-        
+
         let accelDescriptor = MTLInstanceAccelerationStructureDescriptor()
         accelDescriptor.instancedAccelerationStructures = primitiveAccelerationStructures as? [any MTLAccelerationStructure]
         accelDescriptor.instanceCount                   = stage.instances.count
         accelDescriptor.instanceDescriptorBuffer        = instanceBuffer
 
-        instanceAccelerationStructure = newAccelerationStructureWithDescriptor(accelDescriptor)
+        instanceAccelerationStructure = newAccelerationStructure(accelDescriptor)
     }
 
     private func createPipelines() -> Void {
@@ -319,13 +319,13 @@ class Renderer: NSObject, MTKViewDelegate {
             if let _ = intersectionFunctions.index(forKey: geometry.intersectionFunctionName) {
                 continue
             }
-            let intersectionFunction = specializedFunctionWithName(geometry.intersectionFunctionName)
+            let intersectionFunction = specializedFunction(withName: geometry.intersectionFunctionName)
             intersectionFunctions[geometry.intersectionFunctionName] = intersectionFunction
         }
 
-        let raytracingFunction = specializedFunctionWithName("raytracingKernel")
+        let raytracingFunction = specializedFunction(withName: "raytracingKernel")
 
-        raytracingPipeline = newComputePipelineStateWithFunction(raytracingFunction, linkedFunctions: Array<MTLFunction>(intersectionFunctions.values))
+        raytracingPipeline = newComputePipelineState(withFunction: raytracingFunction, linkedFunctions: Array<MTLFunction>(intersectionFunctions.values))
 
         if useIntersectionFunctions {
             let intersectionFunctionTableDescriptor = MTLIntersectionFunctionTableDescriptor()
@@ -361,7 +361,7 @@ class Renderer: NSObject, MTKViewDelegate {
         }
     }
 
-    private func newComputePipelineStateWithFunction(_ function: MTLFunction, linkedFunctions: [MTLFunction]) -> MTLComputePipelineState {
+    private func newComputePipelineState(withFunction function: MTLFunction, linkedFunctions: [MTLFunction]) -> MTLComputePipelineState {
         var mtlLinkedFunctions: MTLLinkedFunctions?
         var pipeline:           MTLComputePipelineState
 
@@ -369,12 +369,12 @@ class Renderer: NSObject, MTKViewDelegate {
             mtlLinkedFunctions = MTLLinkedFunctions()
             mtlLinkedFunctions!.functions = linkedFunctions
         }
-        
+
         let descriptor = MTLComputePipelineDescriptor()
         descriptor.computeFunction                                 = function
         descriptor.linkedFunctions                                 = mtlLinkedFunctions
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
-        
+
         do {
             pipeline = try device.makeComputePipelineState(
                 descriptor: descriptor, options: MTLPipelineOption(), reflection: nil)
@@ -385,7 +385,7 @@ class Renderer: NSObject, MTKViewDelegate {
         return pipeline
     }
 
-    private func specializedFunctionWithName(_ name: String) -> MTLFunction {
+    private func specializedFunction(withName name: String) -> MTLFunction {
         let constants       = MTLFunctionConstantValues()
         var resourcesStride = self.resourcesStride
         var function: MTLFunction
@@ -403,7 +403,7 @@ class Renderer: NSObject, MTKViewDelegate {
         return function
     }
 
-    private func newAccelerationStructureWithDescriptor(_ descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
+    private func newAccelerationStructure(_ descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
         let accelSizes            = device.accelerationStructureSizes(descriptor: descriptor)
         let accelerationStructure = device.makeAccelerationStructure(
             size: accelSizes.accelerationStructureSize)!
@@ -436,7 +436,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
         let compactedSize                  = compactedSizeBuffer.contents().load(as: UInt32.self)
         let compactedAccelerationStructure = device.makeAccelerationStructure(size: Int(compactedSize))!
-        
+
         commandBuffer  = queue.makeCommandBuffer()!
         commandEncoder = commandBuffer.makeAccelerationStructureCommandEncoder()!
         commandEncoder.copyAndCompact(

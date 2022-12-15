@@ -12,7 +12,7 @@ class SMView: MTKView {
             fatalError("no Metal 3 capable GPU available")
         }
         super.init(frame: .zero, device: device)
-        
+
         configure(self)
     }
 
@@ -42,8 +42,8 @@ struct SpeedMetal: App {
         WindowGroup {
             CUIView() {
                 SMView() { this in
-                    let stage = Stage.newInstancedCornellBoxSceneWithDevice(device: this.device!, useIntersectionFunctions: true)
-                    
+                    let stage = Stage.makeCornellBox(device: this.device!, useIntersectionFunctions: true)
+
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
 

@@ -26,12 +26,12 @@ protocol Geometry {
     var device:                   MTLDevice { get }
     var intersectionFunctionName: String    { get }
 
-    init(device: MTLDevice) // initWithDevice
+    init(device: MTLDevice)
 
-    func clear()              -> Void
-    func uploadToBuffers()    -> Void
-    func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor
-    func resources()          -> [MTLResource]
+    func clear()           -> Void
+    func uploadToBuffers() -> Void
+    func descriptor()      -> MTLAccelerationStructureGeometryDescriptor
+    func resources()       -> [MTLResource]
 }
 
 class TriangleGeometry: Geometry {
@@ -63,8 +63,6 @@ class TriangleGeometry: Geometry {
     }
 
     func uploadToBuffers() -> Void {
-        let device = self.device
-
         indexBuffer = device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
@@ -87,7 +85,7 @@ class TriangleGeometry: Geometry {
             options: [.storageModeShared])
     }
 
-    func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
+    func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
         let descriptor = MTLAccelerationStructureTriangleGeometryDescriptor()
 
         descriptor.indexBuffer = indexBuffer
@@ -109,7 +107,7 @@ class TriangleGeometry: Geometry {
         [indexBuffer, vertexNormalBuffer, vertexColorBuffer]
     }
 
-    func addCubeWithFaces(faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
+    func addCube(with faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
         var cubeVertices = [
             vector_float3(-0.5, -0.5, -0.5),
             vector_float3( 0.5, -0.5, -0.5),
@@ -123,7 +121,7 @@ class TriangleGeometry: Geometry {
 
         for i in 0..<8 {
             let vertex = cubeVertices[i]
-            
+
             var transformedVertex = vector_float4(vertex.x, vertex.y, vertex.z, 1.0)
             transformedVertex     = transform * transformedVertex
 
@@ -141,8 +139,8 @@ class TriangleGeometry: Geometry {
 
         for face in 0..<6 {
             if faceMask & (1 << face) > 0 {
-                addCubeFaceWithCubeVertices(
-                    cubeVertices: cubeVertices,
+                addCubeFace(
+                    with: cubeVertices,
                     color: color,
                     i0: cubeIndices[face][0], i1: cubeIndices[face][1],
                     i2: cubeIndices[face][2], i3: cubeIndices[face][3],
@@ -151,7 +149,7 @@ class TriangleGeometry: Geometry {
         }
     }
 
-    private func addCubeFaceWithCubeVertices(cubeVertices: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
+    private func addCubeFace(with cubeVertices: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
         let v0 = cubeVertices[Int(i0)]
         let v1 = cubeVertices[Int(i1)]
         let v2 = cubeVertices[Int(i2)]
@@ -221,13 +219,11 @@ class SphereGeometry: Geometry {
     }
 
     func uploadToBuffers() -> Void {
-        let device = self.device
-
         var boundingBoxes = [BoundingBox]()
 
         for sphere in spheres {
             var bounds = BoundingBox()
-            
+
             bounds.min.x = sphere.origin.x - sphere.radius
             bounds.min.y = sphere.origin.y - sphere.radius
             bounds.min.z = sphere.origin.z - sphere.radius
@@ -249,12 +245,12 @@ class SphereGeometry: Geometry {
             options: [.storageModeShared])
     }
 
-    func geometryDescriptor() -> MTLAccelerationStructureGeometryDescriptor {
+    func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
         let descriptor = MTLAccelerationStructureBoundingBoxGeometryDescriptor()
 
         descriptor.boundingBoxBuffer = boundingBoxBuffer
         descriptor.boundingBoxCount  = spheres.count
-      
+
         // Metal 3
         descriptor.primitiveDataBuffer      = sphereBuffer
         descriptor.primitiveDataStride      = MemoryLayout<Sphere>.stride
@@ -267,7 +263,7 @@ class SphereGeometry: Geometry {
         [sphereBuffer]
     }
 
-    func addSphereWithOrigin(origin: vector_float3, radius: Float, color: vector_float3) -> Void {
+    func addSphere(withOrigin origin: vector_float3, radius: Float, color: vector_float3) -> Void {
         let sphere = Sphere(
             origin:  MTLPackedFloat3(origin),
             radiusSquared: radius * radius,
@@ -291,19 +287,19 @@ class GeometryInstance: NSObject {
 
 class Stage {
     private(set) var device:      MTLDevice
-    
+
     private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
-    
+
     private(set) var cameraPosition: vector_float3
     private(set) var cameraTarget:   vector_float3
     private(set) var cameraUp:       vector_float3
 
     private var lights = [AreaLight]()
 
-    init(device: MTLDevice) { // initWithDevice
+    init(device: MTLDevice) {
         self.device = device
 
         cameraPosition = vector3(0.0, 0.0, -1.0)
@@ -311,7 +307,7 @@ class Stage {
         cameraUp       = vector3(0.0, 1.0, 0.0)
     }
 
-    class func newInstancedCornellBoxSceneWithDevice(device: MTLDevice, useIntersectionFunctions: Bool) -> Stage {
+    class func makeCornellBox(device: MTLDevice, useIntersectionFunctions: Bool) -> Stage {
         let stage = Stage(device: device)
 
         stage.cameraPosition = vector3(0.0, 1.0, 10.0)
@@ -322,9 +318,9 @@ class Stage {
         stage.addGeometry(geometry: lightMesh)
 
         var transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(0.5, 1.98, 0.5)
-     
-        lightMesh.addCubeWithFaces(
-            faceMask: FACE_MASK_POSITIVE_Y,
+
+        lightMesh.addCube(
+            with: .FACE_MASK_POSITIVE_Y,
             color: vector3(1.0, 1.0, 1.0),
             transform: transform,
             inwardNormals: true)
@@ -334,26 +330,26 @@ class Stage {
 
         transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(2.0, 2.0, 2.0)
 
-        geometryMesh.addCubeWithFaces(
-            faceMask: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
+        geometryMesh.addCube(
+            with: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
             color: vector3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: true)
-        geometryMesh.addCubeWithFaces(
-            faceMask: FACE_MASK_NEGATIVE_X,
+        geometryMesh.addCube(
+            with: FACE_MASK_NEGATIVE_X,
             color: vector3(0.63, 0.065, 0.05),
             transform: transform,
             inwardNormals: true)
-        geometryMesh.addCubeWithFaces(
-            faceMask: FACE_MASK_NEGATIVE_X,
+        geometryMesh.addCube(
+            with: FACE_MASK_NEGATIVE_X,
             color: vector3(0.14, 0.45, 0.091),
             transform: transform,
             inwardNormals: true)
 
         transform = matrix4x4_translation(-0.335, 0.6, -0.29) * matrix4x4_rotation(radians: 0.3, axis: vector3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 1.2, 0.6)
 
-        geometryMesh.addCubeWithFaces(
-            faceMask: FACE_MASK_ALL,
+        geometryMesh.addCube(
+            with: FACE_MASK_ALL,
             color: vector3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: false)
@@ -363,15 +359,15 @@ class Stage {
         if !useIntersectionFunctions {
             transform = matrix4x4_translation(0.3275, 0.3, 0.3725) * matrix4x4_rotation(radians: -0.3, axis: vector3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 0.6, 0.6)
 
-            geometryMesh.addCubeWithFaces(
-                faceMask: FACE_MASK_ALL,
+            geometryMesh.addCube(
+                with: FACE_MASK_ALL,
                 color: vector3(0.725, 0.71, 0.68),
                 transform: transform,
                 inwardNormals: false)
         } else {
             sphereGeometry = SphereGeometry(device: device)
-            sphereGeometry!.addSphereWithOrigin(
-                origin: vector3(0.3275, 0.3, 0.3725),
+            sphereGeometry!.addSphere(
+                withOrigin: vector3(0.3275, 0.3, 0.3725),
                 radius: 0.3,
                 color: vector3(0.725, 0.71, 0.68))
 
@@ -406,7 +402,7 @@ class Stage {
                 let r = Float.random(in: 0.0..<1.0)
                 let g = Float.random(in: 0.0..<1.0)
                 let b = Float.random(in: 0.0..<1.0)
-                
+
                 let areaLight = AreaLight(
                     position: vector3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
                     forward: vector3(0.0, -1.0, 0.0),
@@ -423,7 +419,6 @@ class Stage {
     func clear() -> Void {
         geometries.removeAllObjects()
         instances.removeAll()
-
         lights.removeAll()
     }
 
