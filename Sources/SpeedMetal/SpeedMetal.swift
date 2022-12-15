@@ -42,13 +42,14 @@ struct MTKViewRepresentable<Content>: UIViewRepresentable where Content: MTKView
 @main
 struct SpeedMetal: App {
     @State var isPaused = false
-    
+    @State var grid     = InstancesGrid.oneByOne
+
     var body: some Scene {
         WindowGroup {
             MTKViewRepresentable(isPaused) {
                 SMView() { this in
-                    let stage = Stage.hoistCornellBox(device: this.device!, useIntersectionFunctions: true)
-                    
+                    let stage = Stage.hoistCornellBox(device: this.device!, instancesGrid: grid)
+
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
                         
@@ -64,7 +65,8 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-            }.padding(.bottom, 8)
+            }
+            .padding(.bottom, 8)
         }
     }
 }

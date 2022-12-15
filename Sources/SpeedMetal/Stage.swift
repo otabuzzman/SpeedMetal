@@ -285,30 +285,67 @@ class GeometryInstance: NSObject {
     }
 }
 
+enum InstancesGrid {
+    case oneByOne
+    case fourByFour
+    case nineByNine
+}
+
 class Stage {
     private(set) var device:      MTLDevice
 
     private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()
+
+    private var lights = [AreaLight]()
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
 
-    private(set) var cameraPosition: vector_float3
-    private(set) var cameraTarget:   vector_float3
-    private(set) var cameraUp:       vector_float3
-
-    private var lights = [AreaLight]()
+    var cameraPosition     = vector_float3(0.0, 0.0, -1.0)
+    var cameraTarget       = vector_float3(0.0, 0.0, 0.0)
+    var cameraUp           = vector_float3(0.0, 1.0, 0.0)
 
     init(device: MTLDevice) {
         self.device = device
-
-        cameraPosition = vector_float3(0.0, 0.0, -1.0)
-        cameraTarget   = vector_float3(0.0, 0.0, 0.0)
-        cameraUp       = vector_float3(0.0, 1.0, 0.0)
     }
 
-    class func hoistCornellBox(device: MTLDevice, useIntersectionFunctions: Bool) -> Stage {
+    class func hoistCornellBox(device: MTLDevice, instancesGrid grid: InstancesGrid = .oneByOne) -> Stage {
         let stage = Stage(device: device)
+        let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
+            transform = matrix4x4_translation(Float(x) * 2.5, Float(y) * 2.5, 0.0)
+
+            let lightMeshInstance = GeometryInstance(
+                geometry: lightMesh,
+                transform: transform,
+                mask: GEOMETRY_MASK_LIGHT)
+            stage.addGeometryInstance(instance: lightMeshInstance)
+
+            let geometryMeshInstance = GeometryInstance(
+                geometry: geometryMesh,
+                transform: transform,
+                mask: GEOMETRY_MASK_TRIANGLE)
+            stage.addGeometryInstance(instance: geometryMeshInstance)
+
+            if (useIntersectionFunctions) {
+                let sphereGeometryInstance = GeometryInstance(
+                    geometry: sphereGeometry!,
+                    transform: transform,
+                    mask: GEOMETRY_MASK_SPHERE)
+                stage.addGeometryInstance(instance: sphereGeometryInstance)
+            }
+
+            let r = Float.random(in: 0.0..<1.0)
+            let g = Float.random(in: 0.0..<1.0)
+            let b = Float.random(in: 0.0..<1.0)
+
+            let areaLight = AreaLight(
+                position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
+                forward: vector_float3(0.0, -1.0, 0.0),
+                right: vector_float3(0.25, 0.0, 0.0),
+                up: vector_float3(0.0, 0.0, 0.25),
+                color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
+            stage.addLight(light: areaLight)
+        }
 
         stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
         stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
@@ -354,64 +391,29 @@ class Stage {
             transform: transform,
             inwardNormals: false)
 
-        var sphereGeometry: SphereGeometry?
+        let sphereGeometry = SphereGeometry(device: device)
+        stage.addGeometry(geometry: sphereGeometry!)
 
-        if !useIntersectionFunctions {
-            transform = matrix4x4_translation(0.3275, 0.3, 0.3725) * matrix4x4_rotation(radians: -0.3, axis: vector_float3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 0.6, 0.6)
+        sphereGeometry.addSphere(
+            withOrigin: vector_float3(0.3275, 0.3, 0.3725),
+            radius: 0.3,
+            color: vector_float3(0.725, 0.71, 0.68))
 
-            geometryMesh.addCube(
-                with: FACE_MASK_ALL,
-                color: vector_float3(0.725, 0.71, 0.68),
-                transform: transform,
-                inwardNormals: false)
-        } else {
-            sphereGeometry = SphereGeometry(device: device)
-            sphereGeometry!.addSphere(
-                withOrigin: vector_float3(0.3275, 0.3, 0.3725),
-                radius: 0.3,
-                color: vector_float3(0.725, 0.71, 0.68))
-
-            stage.addGeometry(geometry: sphereGeometry!)
-        }
-
-        // nine instances
-        for y in -1...1 {
-            for x in -1...1 {
-                transform = matrix4x4_translation(Float(x) * 2.5, Float(y) * 2.5, 0.0)
-
-                let lightMeshInstance = GeometryInstance(
-                    geometry: lightMesh,
-                    transform: transform,
-                    mask: GEOMETRY_MASK_LIGHT)
-                stage.addGeometryInstance(instance: lightMeshInstance)
-
-                let geometryMeshInstance = GeometryInstance(
-                    geometry: geometryMesh,
-                    transform: transform,
-                    mask: GEOMETRY_MASK_TRIANGLE)
-                stage.addGeometryInstance(instance: geometryMeshInstance)
-
-                if (useIntersectionFunctions) {
-                    let sphereGeometryInstance = GeometryInstance(
-                        geometry: sphereGeometry!,
-                        transform: transform,
-                        mask: GEOMETRY_MASK_SPHERE)
-                    stage.addGeometryInstance(instance: sphereGeometryInstance)
-                }
-
-                let r = Float.random(in: 0.0..<1.0)
-                let g = Float.random(in: 0.0..<1.0)
-                let b = Float.random(in: 0.0..<1.0)
-
-                let areaLight = AreaLight(
-                    position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
-                    forward: vector_float3(0.0, -1.0, 0.0),
-                    right: vector_float3(0.25, 0.0, 0.0),
-                    up: vector_float3(0.0, 0.0, 0.25),
-                    color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
-                stage.addLight(light: areaLight)
-            }
-        }
+		switch grid {
+			case .oneByOne:
+				hoistInstances(0.0, 0.0)
+			case .fourByFour:
+				hoistInstances(-0.5, -0.5)
+				hoistInstances( 0.5, -0.5)
+				hoistInstances(-0.5,  0.5)
+				hoistInstances( 0.5,  0.5)
+			case .nineByNine:
+				for y in -1...1 {
+					for x in -1...1 {
+						hoistInstances(x, y)
+					}
+				}
+		}
 
         return stage
     }

@@ -110,7 +110,7 @@ class Renderer: NSObject, MTKViewDelegate {
         uniforms.pointee.camera.right    = right
         uniforms.pointee.camera.up       = up
 
-        let fieldOfView          = 45.0 * (Float.pi / 180.0)
+        let fieldOfView: Float   = 45.0 * (Float.pi / 180.0 )
         let aspectRatio          = Float(frameSize.width) / Float(frameSize.height)
         let imagePlaneHeight     = tanf(fieldOfView / 2.0)
         let imagePlaneWidth      = aspectRatio * imagePlaneHeight
