@@ -249,7 +249,7 @@ class Renderer: NSObject, MTKViewDelegate {
                     if resource.conforms(to: MTLTexture.self) {
                         resourceHandles.storeBytes(
                             of: (resource as! MTLTexture).gpuResourceID,
-                            toByteOffset: resourceIndex * MemoryLayout<UInt64>.size, as: UInt64.self)
+                            toByteOffset: resourceIndex * MemoryLayout<MTLResourceID>.size, as: MTLResourceID.self)
                     }
                 }
             }
