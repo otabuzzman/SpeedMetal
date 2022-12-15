@@ -48,10 +48,10 @@ struct SpeedMetal: App {
             MTKViewRepresentable(isPaused) {
                 SMView() { this in
                     let stage = Stage.hoistCornellBox(device: this.device!, useIntersectionFunctions: true)
-
+                    
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
-
+                        
                     this.renderer = Renderer(device: this.device!, stage: stage)
                     this.delegate = this.renderer
                 }
@@ -63,9 +63,8 @@ struct SpeedMetal: App {
                     Image(systemName: isPaused ? "play.circle" : "pause.circle")
                         .resizable()
                         .frame(width: 42, height: 42)
-                        .padding(.bottom, 8)
                 }
-            }
+            }.padding(.bottom, 8)
         }
     }
 }
