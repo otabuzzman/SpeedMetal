@@ -236,7 +236,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
             // Metal 3
             let resources       = geometry.resources()
-            let resourceHandles = resourceBuffer.contents().advanced(by: Int(resourcesStride) * geometryIndex)
+            let resourceHandles = resourceBuffer.contents().advanced(by: geometryIndex * Int(resourcesStride))
 
             for resourceIndex in 0..<resources.count {
                 let resource = resources[resourceIndex]
@@ -244,14 +244,12 @@ class Renderer: NSObject, MTKViewDelegate {
                 if resource.conforms(to: MTLBuffer.self) {
                     resourceHandles.storeBytes(
                         of: (resource as! MTLBuffer).gpuAddress,
-                        toByteOffset: resourceIndex * MemoryLayout<UInt64>.size,
-                        as: UInt64.self)
+                        toByteOffset: resourceIndex * MemoryLayout<UInt64>.size, as: UInt64.self)
                 } else {
                     if resource.conforms(to: MTLTexture.self) {
                         resourceHandles.storeBytes(
                             of: (resource as! MTLTexture).gpuResourceID,
-                            toByteOffset: resourceIndex * MemoryLayout<MTLResourceID>.size,
-                            as: MTLResourceID.self)
+                            toByteOffset: resourceIndex * MemoryLayout<UInt64>.size, as: UInt64.self)
                     }
                 }
             }
@@ -288,7 +286,7 @@ class Renderer: NSObject, MTKViewDelegate {
             instanceDescriptors[instanceIndex].options                         = instance.geometry.intersectionFunctionName.isEmpty ? .opaque : .nonOpaque
             instanceDescriptors[instanceIndex].intersectionFunctionTableOffset = 0
             instanceDescriptors[instanceIndex].mask                            = UInt32(instance.mask)
-            instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform)
+            instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform.transpose)
 
         }
 

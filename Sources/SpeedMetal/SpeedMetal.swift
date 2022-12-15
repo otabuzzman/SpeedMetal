@@ -42,7 +42,7 @@ struct SpeedMetal: App {
         WindowGroup {
             CUIView() {
                 SMView() { this in
-                    let stage = Stage.makeCornellBox(device: this.device!, useIntersectionFunctions: true)
+                    let stage = Stage.hoistCornellBox(device: this.device!, useIntersectionFunctions: true)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float

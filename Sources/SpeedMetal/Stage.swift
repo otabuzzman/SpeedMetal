@@ -302,17 +302,17 @@ class Stage {
     init(device: MTLDevice) {
         self.device = device
 
-        cameraPosition = vector3(0.0, 0.0, -1.0)
-        cameraTarget   = vector3(0.0, 0.0, 0.0)
-        cameraUp       = vector3(0.0, 1.0, 0.0)
+        cameraPosition = vector_float3(0.0, 0.0, -1.0)
+        cameraTarget   = vector_float3(0.0, 0.0, 0.0)
+        cameraUp       = vector_float3(0.0, 1.0, 0.0)
     }
 
-    class func makeCornellBox(device: MTLDevice, useIntersectionFunctions: Bool) -> Stage {
+    class func hoistCornellBox(device: MTLDevice, useIntersectionFunctions: Bool) -> Stage {
         let stage = Stage(device: device)
 
-        stage.cameraPosition = vector3(0.0, 1.0, 10.0)
-        stage.cameraTarget   = vector3(0.0, 1.0, 0.0)
-        stage.cameraUp       = vector3(0.0, 1.0, 0.0)
+        stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
+        stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
+        stage.cameraUp       = vector_float3(0.0, 1.0, 0.0)
 
         let lightMesh = TriangleGeometry(device: device)
         stage.addGeometry(geometry: lightMesh)
@@ -320,8 +320,8 @@ class Stage {
         var transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(0.5, 1.98, 0.5)
 
         lightMesh.addCube(
-            with: .FACE_MASK_POSITIVE_Y,
-            color: vector3(1.0, 1.0, 1.0),
+            with: FACE_MASK_POSITIVE_Y,
+            color: vector_float3(1.0, 1.0, 1.0),
             transform: transform,
             inwardNormals: true)
 
@@ -332,44 +332,44 @@ class Stage {
 
         geometryMesh.addCube(
             with: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
-            color: vector3(0.725, 0.71, 0.68),
+            color: vector_float3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
             with: FACE_MASK_NEGATIVE_X,
-            color: vector3(0.63, 0.065, 0.05),
+            color: vector_float3(0.63, 0.065, 0.05),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
             with: FACE_MASK_NEGATIVE_X,
-            color: vector3(0.14, 0.45, 0.091),
+            color: vector_float3(0.14, 0.45, 0.091),
             transform: transform,
             inwardNormals: true)
 
-        transform = matrix4x4_translation(-0.335, 0.6, -0.29) * matrix4x4_rotation(radians: 0.3, axis: vector3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 1.2, 0.6)
+        transform = matrix4x4_translation(-0.335, 0.6, -0.29) * matrix4x4_rotation(radians: 0.3, axis: vector_float3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 1.2, 0.6)
 
         geometryMesh.addCube(
             with: FACE_MASK_ALL,
-            color: vector3(0.725, 0.71, 0.68),
+            color: vector_float3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: false)
 
         var sphereGeometry: SphereGeometry?
 
         if !useIntersectionFunctions {
-            transform = matrix4x4_translation(0.3275, 0.3, 0.3725) * matrix4x4_rotation(radians: -0.3, axis: vector3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 0.6, 0.6)
+            transform = matrix4x4_translation(0.3275, 0.3, 0.3725) * matrix4x4_rotation(radians: -0.3, axis: vector_float3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 0.6, 0.6)
 
             geometryMesh.addCube(
                 with: FACE_MASK_ALL,
-                color: vector3(0.725, 0.71, 0.68),
+                color: vector_float3(0.725, 0.71, 0.68),
                 transform: transform,
                 inwardNormals: false)
         } else {
             sphereGeometry = SphereGeometry(device: device)
             sphereGeometry!.addSphere(
-                withOrigin: vector3(0.3275, 0.3, 0.3725),
+                withOrigin: vector_float3(0.3275, 0.3, 0.3725),
                 radius: 0.3,
-                color: vector3(0.725, 0.71, 0.68))
+                color: vector_float3(0.725, 0.71, 0.68))
 
             stage.addGeometry(geometry: sphereGeometry!)
         }
@@ -404,11 +404,11 @@ class Stage {
                 let b = Float.random(in: 0.0..<1.0)
 
                 let areaLight = AreaLight(
-                    position: vector3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
-                    forward: vector3(0.0, -1.0, 0.0),
-                    right: vector3(0.25, 0.0, 0.0),
-                    up: vector3(0.0, 0.0, 0.25),
-                    color: vector3(r * 4.0, g * 4.0, b * 4.0))
+                    position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
+                    forward: vector_float3(0.0, -1.0, 0.0),
+                    right: vector_float3(0.25, 0.0, 0.0),
+                    up: vector_float3(0.0, 0.0, 0.25),
+                    color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
                 stage.addLight(light: areaLight)
             }
         }
