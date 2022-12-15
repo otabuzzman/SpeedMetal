@@ -132,8 +132,8 @@ class Renderer: NSObject, MTKViewDelegate {
     func draw(in view: MTKView) -> Void {
         maxFramesSignal.wait()
 
-        let commandBuffer = queue.makeCommandBuffer()
-        commandBuffer!.addCompletedHandler() { [self] _ in
+        let commandBuffer = queue.makeCommandBuffer()!
+        commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
         }
 
@@ -147,36 +147,36 @@ class Renderer: NSObject, MTKViewDelegate {
             (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
             (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
-        let computeEncoder = commandBuffer!.makeComputeCommandEncoder()
+        let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
 
-        computeEncoder!.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
+        computeEncoder.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
         if !usePerPrimitiveData {
-            computeEncoder!.setBuffer(resourceBuffer, offset: 0, index: 1)
+            computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
         }
-        computeEncoder!.setBuffer(instanceBuffer, offset: 0, index: 2)
-        computeEncoder!.setBuffer(stage.lightBuffer, offset: 0, index: 3)
+        computeEncoder.setBuffer(instanceBuffer, offset: 0, index: 2)
+        computeEncoder.setBuffer(stage.lightBuffer, offset: 0, index: 3)
 
-        computeEncoder!.setAccelerationStructure(instanceAccelerationStructure, bufferIndex: 4)
-        computeEncoder!.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 5)
+        computeEncoder.setAccelerationStructure(instanceAccelerationStructure, bufferIndex: 4)
+        computeEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 5)
 
-        computeEncoder!.setTexture(randomTexture, index: 0)
-        computeEncoder!.setTexture(accumulationTargets[0], index: 1)
-        computeEncoder!.setTexture(accumulationTargets[1], index: 2)
+        computeEncoder.setTexture(randomTexture, index: 0)
+        computeEncoder.setTexture(accumulationTargets[0], index: 1)
+        computeEncoder.setTexture(accumulationTargets[1], index: 2)
 
         for geometry in stage.geometries {
             for resource in (geometry as! Geometry).resources() {
-                computeEncoder!.useResource(resource, usage: .read)
+                computeEncoder.useResource(resource, usage: .read)
             }
         }
 
         for primitiveAccelerationStructure in primitiveAccelerationStructures {
-            computeEncoder!.useResource(primitiveAccelerationStructure as! MTLResource, usage: .read)
+            computeEncoder.useResource(primitiveAccelerationStructure as! MTLResource, usage: .read)
         }
 
-        computeEncoder!.setComputePipelineState(raytracingPipeline)
+        computeEncoder.setComputePipelineState(raytracingPipeline)
 
-        computeEncoder!.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
-        computeEncoder!.endEncoding()
+        computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
+        computeEncoder.endEncoding()
 
         accumulationTargets.swapAt(0, 1)
 
@@ -187,17 +187,17 @@ class Renderer: NSObject, MTKViewDelegate {
             renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
 
             // Create a render command encoder.
-            let renderEncoder = commandBuffer!.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
-            renderEncoder!.setRenderPipelineState(copyPipeline)
-            renderEncoder!.setFragmentTexture(accumulationTargets[0], index: 0)
-            renderEncoder!.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+            let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
+            renderEncoder.setRenderPipelineState(copyPipeline)
+            renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
 
-            renderEncoder!.endEncoding()
+            renderEncoder.endEncoding()
 
-            commandBuffer!.present(currentDrawable)
+            commandBuffer.present(currentDrawable)
         }
 
-        commandBuffer!.commit()
+        commandBuffer.commit()
     }
 
     private func loadMetal() -> Void {

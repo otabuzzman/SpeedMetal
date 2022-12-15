@@ -21,26 +21,31 @@ class SMView: MTKView {
     }
 }
 
-struct CUIView<Content>: UIViewRepresentable where Content: UIView {
+struct MTKViewRepresentable<Content>: UIViewRepresentable where Content: MTKView {
+    var isPaused: Bool
     var content: Content
 
-    public init(closure: () -> Content) {
+    public init(_ isPaused: Bool, closure: () -> Content) {
+        self.isPaused = isPaused
         content = closure()
     }
 
     public func makeUIView(context: Context) -> Content {
-        return content
+        content
     }
 
     public func updateUIView(_ uiView: Content, context: Context) {
+        uiView.isPaused = isPaused
     }
 }
 
 @main
 struct SpeedMetal: App {
+    @State var isPaused = false
+    
     var body: some Scene {
         WindowGroup {
-            CUIView() {
+            MTKViewRepresentable(isPaused) {
                 SMView() { this in
                     let stage = Stage.hoistCornellBox(device: this.device!, useIntersectionFunctions: true)
 
@@ -49,6 +54,16 @@ struct SpeedMetal: App {
 
                     this.renderer = Renderer(device: this.device!, stage: stage)
                     this.delegate = this.renderer
+                }
+            }
+            HStack {
+                Button {
+                    isPaused.toggle()
+                } label: {
+                    Image(systemName: isPaused ? "play.circle" : "pause.circle")
+                        .resizable()
+                        .frame(width: 42, height: 42)
+                        .padding(.bottom, 8)
                 }
             }
         }
