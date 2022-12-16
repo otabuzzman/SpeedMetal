@@ -4,7 +4,7 @@ import SwiftUI
 class SMView: MTKView {
     var renderer: Renderer!
 
-    init(configure: (SMView) -> ()) {
+    init(_ grid: InstancesGrid, configure: (SMView) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
@@ -13,7 +13,7 @@ class SMView: MTKView {
         }
         super.init(frame: .zero, device: device)
 
-        configure(self)
+        configure(self, grid)
     }
 
     required init(coder: NSCoder) {
@@ -47,8 +47,8 @@ struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             MTKViewRepresentable(isPaused) {
-                SMView() { this in
-                    let stage = Stage.hoistCornellBox(device: this.device!)
+                SMView(lineUp) { this, grid in
+                    let stage = Stage.hoistCornellBox(forMultipleInstances: grid, device: this.device!)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
@@ -97,7 +97,7 @@ struct SpeedMetal: App {
                         .frame(width: 42, height: 42)
                 }
          }
-            .padding(.bottom, 8)
+         .padding(.bottom, 8)
         }
     }
 }

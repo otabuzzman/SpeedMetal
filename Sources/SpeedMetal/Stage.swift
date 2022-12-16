@@ -309,7 +309,7 @@ class Stage {
         self.device = device
     }
 
-    class func hoistCornellBox(device: MTLDevice, instancesGrid grid: InstancesGrid = .oneByOne) -> Stage {
+    class func hoistCornellBox(forMultipleInstances grid: InstancesGrid = .oneByOne, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
         stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
