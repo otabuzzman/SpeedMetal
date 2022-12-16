@@ -186,7 +186,6 @@ class Renderer: NSObject, MTKViewDelegate {
             renderPassDescriptor.colorAttachments[0].loadAction = .clear
             renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
 
-            // Create a render command encoder.
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
             renderEncoder.setRenderPipelineState(copyPipeline)
             renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)

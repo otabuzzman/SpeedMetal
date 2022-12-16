@@ -278,7 +278,7 @@ class GeometryInstance: NSObject {
     private(set) var transform: matrix_float4x4
     private(set) var mask: UInt32
 
-    init(geometry: Geometry, transform: matrix_float4x4, mask: UInt32) { // initWithGeometry
+    init(geometry: Geometry, transform: matrix_float4x4, mask: UInt32) {
         self.geometry  = geometry
         self.transform = transform
         self.mask      = mask
@@ -309,7 +309,7 @@ class Stage {
         self.device = device
     }
 
-    class func hoistCornellBox(forMultipleInstances grid: InstancesGrid = .oneByOne, device: MTLDevice) -> Stage {
+    class func hoistCornellBox(forMultipleInstances grid: InstancesGrid = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
         stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)

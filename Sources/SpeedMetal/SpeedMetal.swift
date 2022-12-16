@@ -4,7 +4,7 @@ import SwiftUI
 class SMView: MTKView {
     var renderer: Renderer!
 
-    init(_ grid: InstancesGrid, configure: (SMView, InstancesGrid) -> ()) {
+    init(configure: (SMView) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
@@ -13,7 +13,7 @@ class SMView: MTKView {
         }
         super.init(frame: .zero, device: device)
 
-        configure(self, grid)
+        configure(self)
     }
 
     required init(coder: NSCoder) {
@@ -42,13 +42,12 @@ struct MTKViewRepresentable<Content>: UIViewRepresentable where Content: MTKView
 @main
 struct SpeedMetal: App {
     @State var isPaused = false
-    @State var lineUp: InstancesGrid = .oneByOne
 
     var body: some Scene {
         WindowGroup {
             MTKViewRepresentable(isPaused) {
                 SMView(lineUp) { this, grid in
-                    let stage = Stage.hoistCornellBox(forMultipleInstances: grid, device: this.device!)
+                    let stage = Stage.hoistCornellBox(device: this.device!)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
@@ -62,37 +61,6 @@ struct SpeedMetal: App {
                     isPaused.toggle()
                 } label: {
                     Image(systemName: isPaused ? "play.circle" : "pause.circle")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                .padding(.trailing, 16)
-                Button {
-                    if lineUp == .oneByOne {
-                        return
-                    }
-                    lineUp = .oneByOne
-                } label: {
-                    Image(systemName: "square")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                Button {
-                    if lineUp == .twoByTwo {
-                        return
-                    }
-                    lineUp = .twoByTwo
-               } label: {
-                    Image(systemName: "square.grid.2x2")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                Button {
-                    if lineUp == .threeByThree {
-                        return
-                    }
-                    lineUp = .threeByThree
-                } label: {
-                    Image(systemName: "square.grid.3x3")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
