@@ -1,10 +1,15 @@
 import MetalKit
 import SwiftUI
 
+enum SMViewControl {
+    case suspend
+    case carryOn
+}
+
 class SMView: MTKView {
     var renderer: Renderer!
 
-    init(configure: (SMView) -> ()) {
+    init(configure: (SMView, InstancesGrid?) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
@@ -13,7 +18,7 @@ class SMView: MTKView {
         }
         super.init(frame: .zero, device: device)
 
-        configure(self)
+        configure(self, nil)
     }
 
     required init(coder: NSCoder) {
@@ -21,32 +26,37 @@ class SMView: MTKView {
     }
 }
 
-struct MTKViewRepresentable<Content>: UIViewRepresentable where Content: MTKView {
-    var isPaused: Bool
+struct SMViewRepresentable<Content>: UIViewRepresentable where Content: SMView {
+    var control: SMViewControl
     var content: Content
 
-    public init(_ isPaused: Bool, closure: () -> Content) {
-        self.isPaused = isPaused
+    init(_ control: SMViewControl, closure: () -> Content) {
+        self.control = control
         content = closure()
     }
 
-    public func makeUIView(context: Context) -> Content {
+    func makeUIView(context: Context) -> Content {
         content
     }
 
-    public func updateUIView(_ uiView: Content, context: Context) {
-        uiView.isPaused = isPaused
+    func updateUIView(_ uiView: Content, context: Context) {
+        switch control {
+            case .suspend:
+                uiView.isPaused.toggle()
+            case .carryOn:
+                uiView.isPaused.toggle()
+        }
     }
 }
 
 @main
 struct SpeedMetal: App {
-    @State var isPaused = false
+    @State var control = .carryOn
 
     var body: some Scene {
         WindowGroup {
-            MTKViewRepresentable(isPaused) {
-                SMView() { this in
+            SMViewRepresentable(control) {
+                SMView() { this, grid in
                     let stage = Stage.hoistCornellBox(device: this.device!)
 
                     this.backgroundColor  = .black
@@ -58,9 +68,9 @@ struct SpeedMetal: App {
             }
             HStack {
                 Button {
-                    isPaused.toggle()
+                    control = control == .suspend ? .carryOn : .suspend
                 } label: {
-                    Image(systemName: isPaused ? "play.circle" : "pause.circle")
+                    Image(systemName: control == .suspend ? "play.circle" : "pause.circle")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
