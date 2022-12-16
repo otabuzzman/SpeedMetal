@@ -42,16 +42,16 @@ struct SMViewRepresentable<Content>: UIViewRepresentable where Content: SMView {
     func updateUIView(_ uiView: Content, context: Context) {
         switch control {
             case .suspend:
-                uiView.isPaused.toggle()
+                uiView.isPaused = true
             case .carryOn:
-                uiView.isPaused.toggle()
+                uiView.isPaused = false
         }
     }
 }
 
 @main
 struct SpeedMetal: App {
-    @State var control = .carryOn
+    @State var control: SMViewControl = .carryOn
 
     var body: some Scene {
         WindowGroup {
