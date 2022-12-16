@@ -46,7 +46,7 @@ struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             MTKViewRepresentable(isPaused) {
-                SMView(lineUp) { this, grid in
+                SMView() { this in
                     let stage = Stage.hoistCornellBox(device: this.device!)
 
                     this.backgroundColor  = .black
