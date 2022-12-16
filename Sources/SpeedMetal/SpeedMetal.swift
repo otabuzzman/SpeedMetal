@@ -4,7 +4,7 @@ import SwiftUI
 class SMView: MTKView {
     var renderer: Renderer!
 
-    init(_ grid: InstancesGrid, configure: (SMView) -> ()) {
+    init(_ grid: InstancesGrid, configure: (SMView, InstancesGrid) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
