@@ -367,14 +367,14 @@ class Renderer: NSObject, MTKViewDelegate {
             mtlLinkedFunctions!.functions = linkedFunctions
         }
 
-        let descriptor = MTLComputePipelineDescriptor()
-        descriptor.computeFunction                                 = function
-        descriptor.linkedFunctions                                 = mtlLinkedFunctions
-        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        let computeDescriptor = MTLComputePipelineDescriptor()
+        computeDescriptor.computeFunction                                 = function
+        computeDescriptor.linkedFunctions                                 = mtlLinkedFunctions
+        computeDescriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
 
         do {
             pipeline = try device.makeComputePipelineState(
-                descriptor: descriptor, options: MTLPipelineOption(), reflection: nil)
+                descriptor: computeDescriptor, options: MTLPipelineOption(), reflection: nil)
         } catch {
             fatalError(String(format: "makeComputePipelineState failed: \(error)"))
         }

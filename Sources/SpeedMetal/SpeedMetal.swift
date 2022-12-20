@@ -26,7 +26,7 @@ class SMView: MTKView {
     }
 }
 
-struct SMViewRepresentable<Content>: UIViewRepresentable where Content: SMView {
+struct SMViewAdapter<Content>: UIViewRepresentable where Content: SMView {
     var control: SMViewControl
     var content: Content
 
@@ -55,7 +55,7 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
-            SMViewRepresentable(control) {
+            SMViewAdapter(control) {
                 SMView() { this, grid in
                     let stage = Stage.hoistCornellBox(device: this.device!)
 
