@@ -205,8 +205,8 @@ class SphereGeometry: Geometry {
     var device:                    MTLDevice
     var intersectionFunctionName = "sphereIntersectionFunction"
 
-    private var sphereBuffer:           MTLBuffer!
-    private var boundingBoxBuffer:      MTLBuffer!
+    private var sphereBuffer:      MTLBuffer!
+    private var boundingBoxBuffer: MTLBuffer!
 
     private var spheres = [Sphere]()
 
@@ -301,9 +301,9 @@ class Stage {
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
 
-    var cameraPosition     = vector_float3(0.0, 0.0, -1.0)
-    var cameraTarget       = vector_float3(0.0, 0.0, 0.0)
-    var cameraUp           = vector_float3(0.0, 1.0, 0.0)
+    var cameraPosition = vector_float3(0.0, 0.0, -1.0)
+    var cameraTarget   = vector_float3(0.0, 0.0, 0.0)
+    var cameraUp       = vector_float3(0.0, 1.0, 0.0)
 
     init(device: MTLDevice) {
         self.device = device
@@ -343,7 +343,7 @@ class Stage {
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
-            with: FACE_MASK_NEGATIVE_X,
+            with: FACE_MASK_POSITIVE_X,
             color: vector_float3(0.14, 0.45, 0.091),
             transform: transform,
             inwardNormals: true)
@@ -365,7 +365,7 @@ class Stage {
             color: vector_float3(0.725, 0.71, 0.68))
 
         let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
-            transform = matrix4x4_translation(Float(x) * 2.5, Float(y) * 2.5, 0.0)
+            transform = matrix4x4_translation(x * 2.5, y * 2.5, 0.0)
             
             let lightMeshInstance = GeometryInstance(
                 geometry: lightMesh,
@@ -390,7 +390,7 @@ class Stage {
             let b = Float.random(in: 0.0..<1.0)
             
             let areaLight = AreaLight(
-                position: vector_float3(Float(x) * 2.5, Float(y) * 2.5 + 1.98, 0.0),
+                position: vector_float3(x * 2.5, y * 2.5 + 1.98, 0.0),
                 forward: vector_float3(0.0, -1.0, 0.0),
                 right: vector_float3(0.25, 0.0, 0.0),
                 up: vector_float3(0.0, 0.0, 0.25),
