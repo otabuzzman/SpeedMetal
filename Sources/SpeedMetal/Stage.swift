@@ -188,14 +188,14 @@ class TriangleGeometry: Geometry {
         }
 
         for triangleIndex in 0..<2 {
-            var n = [vector_float3]()
-            var c = [vector_float3]()
+            var n = [MTLPackedFloat3]()
+            var c = [MTLPackedFloat3]()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                n.append(normals[index])
-                c.append(colors[index])
+                n.append(MTLPackedFloat3(normals[index]))
+                c.append(MTLPackedFloat3(colors[index]))
             }
-            let triangle = Triangle(n0: n[0], n1: n[1], n2: n[2], c0: c[0], c1: c[1], c2: c[2])
+            let triangle = Triangle(normals: (n[0], n[1], n[2]), colors: (c[0], c[1], c[2]))
             triangles.append(triangle)
         }
     }

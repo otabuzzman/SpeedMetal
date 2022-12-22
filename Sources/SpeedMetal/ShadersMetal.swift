@@ -63,19 +63,15 @@ struct Uniforms {
 };
 
 struct Sphere {
-    vector_float3 origin;
+    packed_float3 origin;
     float radiusSquared;
-    vector_float3 color;
+    packed_float3 color;
     float radius;
 };
 
 struct Triangle {
-    vector_float3 n0;
-    vector_float3 n1;
-    vector_float3 n2;
-    vector_float3 c0;
-    vector_float3 c1;
-    vector_float3 c2;
+    vector_float3 normals[3];
+    vector_float3 colors[3];
 };
 
 // #endif
@@ -466,13 +462,13 @@ kernel void raytracingKernel(
                     // The ray hit a triangle. Look up the corresponding geometry's normal and UV buffers.
                     device TriangleResources & triangleResources = *(device TriangleResources *)((device char *)resources + resourcesStride * geometryIndex);
 
-                    triangle.normals.n0 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 0]];
-                    triangle.normals.n1 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 1]];
-                    triangle.normals.n2 =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 2]];
+                    triangle.normals[0] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 0]];
+                    triangle.normals[1] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 1]];
+                    triangle.normals[2] =  triangleResources.vertexNormals[triangleResources.indices[primitiveIndex * 3 + 2]];
 
-                    triangle.colors.c0 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 0]];
-                    triangle.colors.c1 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 1]];
-                    triangle.colors.c2 =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 2]];
+                    triangle.colors[0] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 0]];
+                    triangle.colors[1] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 1]];
+                    triangle.colors[2] =  triangleResources.vertexColors[triangleResources.indices[primitiveIndex * 3 + 2]];
                 }
 
                 // Interpolate the vertex normal at the intersection point.
