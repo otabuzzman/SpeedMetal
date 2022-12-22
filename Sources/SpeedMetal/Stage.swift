@@ -122,7 +122,7 @@ class TriangleGeometry: Geometry {
         for i in 0..<8 {
             let vertex = cubeVertices[i]
 
-            var transformedVertex = vector_float4(vertex.x, vertex.y, vertex.z, 1.0)
+            var transformedVertex = simd_make_float4(vertex, 1.0)
             transformedVertex     = transform * transformedVertex
 
             cubeVertices[i] = simd_make_float3(transformedVertex)
@@ -178,9 +178,9 @@ class TriangleGeometry: Geometry {
         vertices.append(v2)
         vertices.append(v3)
 
-        normals.append(normalize(n0 + n1))
+        normals.append(simd_normalize(n0 + n1))
         normals.append(n0)
-        normals.append(normalize(n0 + n1))
+        normals.append(simd_normalize(n0 + n1))
         normals.append(n1)
 
         for _ in 0..<4 {
@@ -188,12 +188,12 @@ class TriangleGeometry: Geometry {
         }
 
         for triangleIndex in 0..<2 {
-            var n = [MTLPackedFloat3]()
-            var c = [MTLPackedFloat3]()
+            var n = [vector_float3]()
+            var c = [vector_float3]()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                n.append(MTLPackedFloat3(normals[index]))
-                c.append(MTLPackedFloat3(colors[index]))
+                n.append(vector_float3(normals[index]))
+                c.append(vector_float3(colors[index]))
             }
             let triangle = Triangle(normals: (n[0], n[1], n[2]), colors: (c[0], c[1], c[2]))
             triangles.append(triangle)

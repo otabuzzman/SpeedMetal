@@ -42,6 +42,6 @@ struct Sphere {
 }
 
 struct Triangle {
-    var normals: (MTLPackedFloat3, MTLPackedFloat3, MTLPackedFloat3)
-    var colors: (MTLPackedFloat3, MTLPackedFloat3, MTLPackedFloat3)
+    var normals: (vector_float3, vector_float3, vector_float3)
+    var colors:  (vector_float3, vector_float3, vector_float3)
 }
