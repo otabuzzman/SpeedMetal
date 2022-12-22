@@ -35,13 +35,17 @@ struct Uniforms {
 }
 
 struct Sphere {
-    var origin:        MTLPackedFloat3
+    var origin:        vector_float3
     var radiusSquared: Float
-    var color:         MTLPackedFloat3
+    var color:         vector_float3
     var radius:        Float
 }
 
 struct Triangle {
-    var normals: (vector_float3, vector_float3, vector_float3)
-    var colors:  (vector_float3, vector_float3, vector_float3)
+    var n0: vector_float3
+    var n1: vector_float3
+    var n2: vector_float3
+    var c0: vector_float3
+    var c1: vector_float3
+    var c2: vector_float3
 }

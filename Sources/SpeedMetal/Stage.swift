@@ -192,10 +192,10 @@ class TriangleGeometry: Geometry {
             var c = [vector_float3]()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                n.append(vector_float3(normals[index]))
-                c.append(vector_float3(colors[index]))
+                n.append(normals[index])
+                c.append(colors[index])
             }
-            let triangle = Triangle(normals: (n[0], n[1], n[2]), colors: (c[0], c[1], c[2]))
+            let triangle = Triangle(n0: n[0], n1: n[1], n2: n[2], c0: c[0], c1: c[1], c2: c[2])
             triangles.append(triangle)
         }
     }
