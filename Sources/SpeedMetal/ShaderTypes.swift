@@ -13,9 +13,9 @@ let RAY_MASK_SECONDARY: UInt32     = GEOMETRY_MASK_GEOMETRY
 
 struct Camera {
     var position: vector_float3
+    var forward:  vector_float3
     var right:    vector_float3
     var up:       vector_float3
-    var forward:  vector_float3
 }
 
 struct AreaLight {
@@ -44,4 +44,9 @@ struct Sphere {
 struct Triangle {
     var normals: (vector_float3, vector_float3, vector_float3)
     var colors:  (vector_float3, vector_float3, vector_float3)
+	
+	init() {
+		normals = (.zero, .zero, .zero)
+		colors  = (.zero, .zero, .zero)
+	}
 }

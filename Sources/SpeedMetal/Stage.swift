@@ -188,14 +188,21 @@ class TriangleGeometry: Geometry {
         }
 
         for triangleIndex in 0..<2 {
-            var n = [vector_float3]()
-            var c = [vector_float3]()
+            var triangle = Triangle()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-                n.append(normals[index])
-                c.append(colors[index])
+				// https://stackoverflow.com/a/65500187
+                withUnsafeMutablePointer(to: &triangle.normals) { tuple in
+                    tuple.withMemoryRebound(to: vector_float3.self, capacity: 3) { array in
+                        array[i] = normals[index]
+                    }
+                }
+                withUnsafeMutablePointer(to: &triangle.colors) { tuple in
+                    tuple.withMemoryRebound(to: vector_float3.self, capacity: 3) { array in
+                        array[i] = colors[index]
+                    }
+                }
             }
-            let triangle = Triangle(normals: (n[0], n[1], n[2]), colors: (c[0], c[1], c[2]))
             triangles.append(triangle)
         }
     }
@@ -312,7 +319,7 @@ class Stage {
     class func hoistCornellBox(forMultipleInstances grid: InstancesGrid = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
-        stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
+        stage.cameraPosition = vector_float3(0.0, 1.0, 20.0)
         stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
         stage.cameraUp       = vector_float3(0.0, 1.0, 0.0)
 
@@ -390,7 +397,7 @@ class Stage {
             let b = Float.random(in: 0.0...1.0)
             
             let areaLight = AreaLight(
-                position: vector_float3(x * 2.5, y * 2.5 + 1.98, 0.0),
+                position: vector_float3(x * 2.5, y * 2.5 + 1.98, 2.0),
                 forward: vector_float3(0.0, -1.0, 0.0),
                 right: vector_float3(0.25, 0.0, 0.0),
                 up: vector_float3(0.0, 0.0, 0.25),

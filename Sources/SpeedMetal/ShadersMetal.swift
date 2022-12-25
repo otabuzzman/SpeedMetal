@@ -31,7 +31,7 @@ The header that contains the types and enumeration constants that the Metal shad
 struct packed_float3 {
 #ifdef __cplusplus
     packed_float3() = default;
-    packed_float3(vector_float3 v) : x(v.x), y(v.y), z(v.z) {}
+    packed_float3(float3 v) : x(v.x), y(v.y), z(v.z) {}
 #endif
     float x;
     float y;
@@ -40,18 +40,18 @@ struct packed_float3 {
 #endif
 
 struct Camera {
-    vector_float3 position;
-    vector_float3 right;
-    vector_float3 up;
-    vector_float3 forward;
+    float3 position;
+    float3 forward;
+    float3 right;
+    float3 up;
 };
 
 struct AreaLight {
-    vector_float3 position;
-    vector_float3 forward;
-    vector_float3 right;
-    vector_float3 up;
-    vector_float3 color;
+    float3 position;
+    float3 forward;
+    float3 right;
+    float3 up;
+    float3 color;
 };
 
 struct Uniforms {
@@ -70,8 +70,8 @@ struct Sphere {
 };
 
 struct Triangle {
-    vector_float3 normals[3];
-    vector_float3 colors[3];
+    float3 normals[3];
+    float3 colors[3];
 };
 
 // #endif
