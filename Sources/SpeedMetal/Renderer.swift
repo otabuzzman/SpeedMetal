@@ -77,12 +77,11 @@ class Renderer: NSObject, MTKViewDelegate {
             device.makeTexture(descriptor: textureDescriptor)!
         ]
 
-        textureDescriptor.width       = Int(frameSize.width * upscaleFactor)
-        textureDescriptor.height      = Int(frameSize.height * upscaleFactor)
-        
-        upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
-        
         if useSpatialUpscaler {
+            textureDescriptor.width  = Int(frameSize.width * upscaleFactor)
+            textureDescriptor.height = Int(frameSize.height * upscaleFactor)
+            upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
+            
             createSpatialUpscaler()
         }
         
@@ -146,6 +145,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     func draw(in view: MTKView) -> Void {
+        // if frameIndex > 100 { view.isPaused = true }
         maxFramesSignal.wait()
 
         let commandBuffer = queue.makeCommandBuffer()!
