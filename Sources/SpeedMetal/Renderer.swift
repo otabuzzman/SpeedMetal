@@ -40,10 +40,11 @@ class Renderer: NSObject, MTKViewDelegate {
     private var resourcesStride: UInt32  = 0
     private var useIntersectionFunctions = false
     private var usePerPrimitiveData      = true // Metal 3
+    private var useSpatialUpscaler       = false
     
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
-    private var upscaleFactor = 8.0
+    private var upscaleFactor = 2.0
 
     init(device: MTLDevice, stage: Stage) {
         self.device = device
@@ -81,7 +82,9 @@ class Renderer: NSObject, MTKViewDelegate {
         
         upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
         
-        createSpatialUpscaler()
+        if useSpatialUpscaler {
+            createSpatialUpscaler()
+        }
         
         var randomValues = [UInt32](repeating: 0, count: Int(frameSize.width * frameSize.height))
 
@@ -193,9 +196,11 @@ class Renderer: NSObject, MTKViewDelegate {
 
         accumulationTargets.swapAt(0, 1)
 
-        spatialUpscaler.colorTexture = accumulationTargets[0]
-        spatialUpscaler.outputTexture = upscaledTarget
-        spatialUpscaler.encode(commandBuffer: commandBuffer)
+        if useSpatialUpscaler {
+            spatialUpscaler.colorTexture = accumulationTargets[0]
+            spatialUpscaler.outputTexture = upscaledTarget
+            spatialUpscaler.encode(commandBuffer: commandBuffer)
+        }
             
         if let currentDrawable = view.currentDrawable {
             let renderPassDescriptor = MTLRenderPassDescriptor()
@@ -205,7 +210,11 @@ class Renderer: NSObject, MTKViewDelegate {
 
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
             renderEncoder.setRenderPipelineState(copyPipeline)
-            renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
+            if useSpatialUpscaler {
+                renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
+            } else {
+                renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
+            }
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
             
             renderEncoder.endEncoding()
