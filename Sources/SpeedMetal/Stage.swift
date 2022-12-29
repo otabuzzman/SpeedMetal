@@ -191,7 +191,7 @@ class TriangleGeometry: Geometry {
             var triangle = Triangle()
             for i in 0..<3 {
                 let index = Int(indices[firstIndex + triangleIndex * 3 + i])
-				// https://stackoverflow.com/a/65500187
+                // https://stackoverflow.com/a/65500187
                 withUnsafeMutablePointer(to: &triangle.normals) { tuple in
                     tuple.withMemoryRebound(to: vector_float3.self, capacity: 3) { array in
                         array[i] = normals[index]
@@ -292,7 +292,7 @@ class GeometryInstance: NSObject {
     }
 }
 
-enum InstancesGrid {
+enum LineUp {
     case oneByOne
     case twoByTwo
     case threeByThree
@@ -316,10 +316,10 @@ class Stage {
         self.device = device
     }
 
-    class func hoistCornellBox(forMultipleInstances grid: InstancesGrid = .threeByThree, device: MTLDevice) -> Stage {
+    class func hoistCornellBox(lineUp: LineUp = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
-        stage.cameraPosition = vector_float3(0.0, 1.0, 20.0)
+        stage.cameraPosition = vector_float3(0.0, 1.0, 14.0)
         stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
         stage.cameraUp       = vector_float3(0.0, 1.0, 0.0)
 
@@ -405,7 +405,7 @@ class Stage {
             stage.addLight(light: areaLight)
         }
 
-        switch grid {
+        switch lineUp {
             case .oneByOne:
                 hoistInstances(0.0, 0.0)
         case .twoByTwo:

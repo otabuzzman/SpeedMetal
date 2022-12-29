@@ -9,7 +9,7 @@ enum SMViewControl {
 class SMView: MTKView {
     var renderer: Renderer!
 
-    init(configure: (SMView, InstancesGrid?) -> ()) {
+    init(configure: (SMView) -> ()) {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
@@ -18,7 +18,7 @@ class SMView: MTKView {
         }
         super.init(frame: .zero, device: device)
 
-        configure(self, nil)
+        configure(self)
     }
 
     required init(coder: NSCoder) {
@@ -26,13 +26,13 @@ class SMView: MTKView {
     }
 }
 
-struct SMViewAdapter<Content>: UIViewRepresentable where Content: SMView {
+struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
     var control: SMViewControl
     var content: Content
 
-    init(_ control: SMViewControl, closure: () -> Content) {
+    init(_ control: SMViewControl, content: () -> Content) {
         self.control = control
-        content = closure()
+        self.content = content()
     }
 
     func makeUIView(context: Context) -> Content {
@@ -56,7 +56,7 @@ struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             SMViewAdapter(control) {
-                SMView() { this, grid in
+                SMView() { this in
                     let stage = Stage.hoistCornellBox(device: this.device!)
 
                     this.backgroundColor  = .black
