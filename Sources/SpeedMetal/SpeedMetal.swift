@@ -57,7 +57,7 @@ struct SpeedMetal: App {
         WindowGroup {
             SMViewAdapter(control) {
                 SMView() { this in
-                    let stage = Stage.hoistCornellBox(device: this.device!)
+                    let stage = Stage.hoistCornellBox(lineUp: .threeByThree, device: this.device!)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float

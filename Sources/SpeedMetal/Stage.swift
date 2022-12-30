@@ -319,8 +319,8 @@ class Stage {
     class func hoistCornellBox(lineUp: LineUp = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
-        stage.cameraPosition = vector_float3(0.0, 1.0, 14.0)
-        stage.cameraTarget   = vector_float3(0.0, 1.0, 0.0)
+        // stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
+        stage.cameraTarget   = vector_float3(0.0, 0.0, 0.0)
         stage.cameraUp       = vector_float3(0.0, 1.0, 0.0)
 
         let lightMesh = TriangleGeometry(device: device)
@@ -401,24 +401,27 @@ class Stage {
                 forward: vector_float3(0.0, -1.0, 0.0),
                 right: vector_float3(0.25, 0.0, 0.0),
                 up: vector_float3(0.0, 0.0, 0.25),
-                color: vector_float3(r * 4.0, g * 4.0, b * 4.0))
+                color: vector_float3(r * 4, g * 4, b * 4))
             stage.addLight(light: areaLight)
         }
 
         switch lineUp {
-            case .oneByOne:
-                hoistInstances(0.0, 0.0)
+        case .oneByOne:
+            stage.cameraPosition = vector_float3(0.0, 0.0, 5.0)
+            hoistInstances(0.0, 0.0)
         case .twoByTwo:
-                hoistInstances(-0.5, -0.5)
-                hoistInstances( 0.5, -0.5)
-                hoistInstances(-0.5,  0.5)
-                hoistInstances( 0.5,  0.5)
+            stage.cameraPosition = vector_float3(0.0, 0.0, 8.5)
+            hoistInstances(-0.5, -0.5)
+            hoistInstances( 0.5, -0.5)
+            hoistInstances(-0.5,  0.5)
+            hoistInstances( 0.5,  0.5)
         case .threeByThree:
-                for y in -1...1 {
-                    for x in -1...1 {
-                        hoistInstances(Float(x), Float(y))
-                    }
+            stage.cameraPosition = vector_float3(0.0, 0.0, 12.0)
+            for y in -1...1 {
+                for x in -1...1 {
+                    hoistInstances(Float(x), Float(y))
                 }
+            }
         }
 
         return stage

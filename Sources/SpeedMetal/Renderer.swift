@@ -32,7 +32,8 @@ class Renderer: NSObject, MTKViewDelegate {
 
     private var maxFramesSignal: DispatchSemaphore
     private var frameSize: CGSize        = .zero
-    private var frameIndex: UInt32       = 0
+    private var frameIndex: UInt32       = 1
+    private var framesToRender: UInt32   = 1000
 
     private var uniformBufferOffset      = 0
     private var uniformBufferIndex       = 0
@@ -102,7 +103,7 @@ class Renderer: NSObject, MTKViewDelegate {
             withBytes: &randomValues,
             bytesPerRow: MemoryLayout<UInt32>.size * Int(frameSize.width))
 
-        frameIndex = 0
+        frameIndex = 1
     }
 
     private func updateUniforms() -> Void {
@@ -145,7 +146,10 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     func draw(in view: MTKView) -> Void {
-        // if frameIndex > 100 { view.isPaused = true }
+        if frameIndex % framesToRender == 0 {
+            view.isPaused = true
+        }
+        
         maxFramesSignal.wait()
 
         let commandBuffer = queue.makeCommandBuffer()!
