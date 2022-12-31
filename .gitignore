@@ -2,3 +2,8 @@ MetalForAcceleratingRayTracing/
 MetalForAcceleratingRayTracing.zip
 AcceleratingRayTracingUsingMetal/
 AcceleratingRayTracingUsingMetal.zip
+ApplyingTemporalAntialiasingAndUpscalingUsingMetalFX/
+ApplyingTemporalAntialiasingAndUpscalingUsingMetalFX.zip
+RenderingReflectionsInRealTimeUsingRayTracing/
+RenderingReflectionsInRealTimeUsingRayTracing.zip
+*.exe
