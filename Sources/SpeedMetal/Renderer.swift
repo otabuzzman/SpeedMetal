@@ -381,6 +381,15 @@ class Renderer: NSObject, MTKViewDelegate {
         renderDescriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
         renderDescriptor.colorAttachments[0].pixelFormat = .rgba16Float
 
+        let renderBinaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
+        do {
+            let renderBinaryArchive = try device.makeBinaryArchive(descriptor: renderBinaryArchiveDescriptor)
+            try renderBinaryArchive.addRenderPipelineFunctions(descriptor: renderDescriptor)
+            // try renderBinaryArchive.serialize(to: URL(string: "shader.metallib")!)
+        } catch {
+            fatalError(String(format: "harvest shader binary archive failed: \(error)"))
+        }
+
         do {
             copyPipeline = try device.makeRenderPipelineState(descriptor: renderDescriptor)
         } catch {
@@ -401,7 +410,16 @@ class Renderer: NSObject, MTKViewDelegate {
         computeDescriptor.computeFunction                                 = function
         computeDescriptor.linkedFunctions                                 = mtlLinkedFunctions
         computeDescriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
-
+        
+        let computeBinaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
+        do {
+            let computeBinaryArchive = try device.makeBinaryArchive(descriptor: computeBinaryArchiveDescriptor)
+            try computeBinaryArchive.addComputePipelineFunctions(descriptor: computeDescriptor)
+            // try computeBinaryArchive.serialize(to: URL(string: "raycer.metallib")!)
+        } catch {
+            fatalError(String(format: "harvest compute binary archive failed: \(error)"))
+        }
+        
         do {
             pipeline = try device.makeComputePipelineState(
                 descriptor: computeDescriptor, options: MTLPipelineOption(), reflection: nil)
