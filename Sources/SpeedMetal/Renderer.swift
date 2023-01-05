@@ -30,10 +30,10 @@ class Renderer: NSObject, MTKViewDelegate {
 
     private var intersectionFunctionTable: MTLIntersectionFunctionTable!
 
-    private var maxFramesSignal: DispatchSemaphore
+    private var maxFramesSignal: DispatchSemaphore!
     private var frameSize: CGSize        = .zero
     private var frameIndex: UInt32       = 1
-    private var framesToRender: UInt32   = 1000
+    private var framesToRender: UInt32   = 1
 
     private var uniformBufferOffset      = 0
     private var uniformBufferIndex       = 0
@@ -50,17 +50,24 @@ class Renderer: NSObject, MTKViewDelegate {
     init(device: MTLDevice, stage: Stage) {
         self.device = device
         self.stage = stage
-
-        maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
-
         super.init()
+        
+        rearrange()
+    }
 
+    func rearrange(stage: Stage? = nil) -> Void {
+        if let stage = stage {
+            self.stage = stage
+        }
+        
+        maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
+        
         loadMetal()
         createBuffers()
         createAccelerationStructures()
         createPipelines()
     }
-
+    
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
         frameSize.width = size.width / upscaleFactor
         frameSize.height = size.height / upscaleFactor

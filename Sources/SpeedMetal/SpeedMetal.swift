@@ -1,9 +1,10 @@
 import MetalKit
 import SwiftUI
 
-enum SMViewControl {
+enum SMViewControl: Equatable {
     case suspend
     case carryOn
+    case lineUp(LineUp)
 }
 
 class SMView: MTKView {
@@ -41,10 +42,19 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
 
     func updateUIView(_ uiView: Content, context: Context) {
         switch control {
-            case .suspend:
-                uiView.isPaused = true
-            case .carryOn:
-                uiView.isPaused = false
+        case .suspend:
+            uiView.isPaused = true
+        case .carryOn:
+            uiView.isPaused = false
+        case .lineUp(let lineUp):
+            uiView.isPaused = true
+            let renderer = uiView.delegate as! Renderer
+            
+            let stage = Stage.hoistCornellBox(lineUp: lineUp, device: uiView.device!)
+            renderer.rearrange(stage: stage)
+            
+            renderer.mtkView(uiView, drawableSizeWillChange: uiView.drawableSize)
+            uiView.isPaused = false
         }
     }
 }
@@ -57,7 +67,7 @@ struct SpeedMetal: App {
         WindowGroup {
             SMViewAdapter(control) {
                 SMView() { this in
-                    let stage = Stage.hoistCornellBox(lineUp: .threeByThree, device: this.device!)
+                    let stage = Stage.hoistCornellBox(lineUp: .oneByOne, device: this.device!)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
@@ -68,9 +78,23 @@ struct SpeedMetal: App {
             }
             HStack {
                 Button {
-                    control = control == .suspend ? .carryOn : .suspend
+                    control = .lineUp(.oneByOne)
                 } label: {
-                    Image(systemName: control == .suspend ? "play.circle" : "pause.circle")
+                    Image(systemName: control == .lineUp(.oneByOne) ? "square.fill" : "square")
+                        .resizable()
+                        .frame(width: 42, height: 42)
+                }
+                Button {
+                    control = .lineUp(.twoByTwo)
+                } label: {
+                    Image(systemName: control == .lineUp(.twoByTwo) ? "square.grid.2x2.fill" : "square.grid.2x2")
+                        .resizable()
+                        .frame(width: 42, height: 42)
+                }
+                Button {
+                    control = .lineUp(.threeByThree)
+                } label: {
+                    Image(systemName: control == .lineUp(.threeByThree) ? "square.grid.3x3.fill" : "square.grid.3x3")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
