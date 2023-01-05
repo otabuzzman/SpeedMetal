@@ -4,6 +4,10 @@ import MetalKit
 import MetalFX
 import simd
 
+class RendererControl: ObservableObject {
+    @Published var lineUp = LineUp.threeByThree
+}
+
 class Renderer: NSObject, MTKViewDelegate {
     private var device: MTLDevice
     private var stage:  Stage
@@ -42,7 +46,7 @@ class Renderer: NSObject, MTKViewDelegate {
     private var useIntersectionFunctions = false
     private var usePerPrimitiveData      = true // Metal 3
     private var useSpatialUpscaler       = false
-    
+
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
     private var upscaleFactor = 2.0
@@ -51,27 +55,36 @@ class Renderer: NSObject, MTKViewDelegate {
         self.device = device
         self.stage = stage
         super.init()
-        
-        rearrange()
+        loadMetal()
+
+        reset()
     }
 
-    func rearrange(stage: Stage? = nil) -> Void {
+    func reset(stage: Stage? = nil) -> Void {
         if let stage = stage {
             self.stage = stage
         }
-        
+
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
-        
-        loadMetal()
+
         createBuffers()
         createAccelerationStructures()
         createPipelines()
+
+        let zeroes = Array<vector_float4>(repeating: vector_float4(x: 0, y: 0, z: 0, w: 0), count: Int(frameSize.width * frameSize.height))
+        for target in accumulationTargets {
+            target.replace(
+            region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
+            mipmapLevel: 0,
+            withBytes: &zeroes,
+            bytesPerRow: MemoryLayout<vector_float4>.size * Int(frameSize.width))
+        }
     }
-    
+
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
         frameSize.width = size.width / upscaleFactor
         frameSize.height = size.height / upscaleFactor
-        
+
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
         textureDescriptor.textureType = .type2D
@@ -89,10 +102,10 @@ class Renderer: NSObject, MTKViewDelegate {
             textureDescriptor.width  = Int(frameSize.width * upscaleFactor)
             textureDescriptor.height = Int(frameSize.height * upscaleFactor)
             upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
-            
+
             createSpatialUpscaler()
         }
-        
+
         var randomValues = [UInt32](repeating: 0, count: Int(frameSize.width * frameSize.height))
 
         for i in 0..<Int(frameSize.width * frameSize.height) {
@@ -156,7 +169,7 @@ class Renderer: NSObject, MTKViewDelegate {
         if frameIndex % framesToRender == 0 {
             view.isPaused = true
         }
-        
+
         maxFramesSignal.wait()
 
         let commandBuffer = queue.makeCommandBuffer()!
@@ -212,7 +225,7 @@ class Renderer: NSObject, MTKViewDelegate {
             spatialUpscaler.outputTexture = upscaledTarget
             spatialUpscaler.encode(commandBuffer: commandBuffer)
         }
-            
+
         if let currentDrawable = view.currentDrawable {
             let renderPassDescriptor = MTLRenderPassDescriptor()
             renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
@@ -227,9 +240,9 @@ class Renderer: NSObject, MTKViewDelegate {
                 renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
             }
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-            
+
             renderEncoder.endEncoding()
-            
+
             commandBuffer.present(currentDrawable)
         }
 
@@ -417,7 +430,7 @@ class Renderer: NSObject, MTKViewDelegate {
         computeDescriptor.computeFunction                                 = function
         computeDescriptor.linkedFunctions                                 = mtlLinkedFunctions
         computeDescriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
-        
+
         let computeBinaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
         do {
             let computeBinaryArchive = try device.makeBinaryArchive(descriptor: computeBinaryArchiveDescriptor)
@@ -426,7 +439,7 @@ class Renderer: NSObject, MTKViewDelegate {
         } catch {
             fatalError(String(format: "harvest compute binary archive failed: \(error)"))
         }
-        
+
         do {
             pipeline = try device.makeComputePipelineState(
                 descriptor: computeDescriptor, options: MTLPipelineOption(), reflection: nil)
@@ -500,7 +513,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
         return compactedAccelerationStructure
     }
-    
+
     private func createSpatialUpscaler() -> Void {
         let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
         upscalerDescriptor.inputWidth   = Int(frameSize.width)
@@ -510,7 +523,7 @@ class Renderer: NSObject, MTKViewDelegate {
         upscalerDescriptor.colorTextureFormat  = .rgba32Float
         upscalerDescriptor.outputTextureFormat = .rgba32Float
         upscalerDescriptor.colorProcessingMode = .perceptual
-        
+
         spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
     }
 }

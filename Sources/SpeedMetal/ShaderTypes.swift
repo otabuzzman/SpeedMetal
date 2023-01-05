@@ -44,9 +44,9 @@ struct Sphere {
 struct Triangle {
     var normals: (vector_float3, vector_float3, vector_float3)
     var colors:  (vector_float3, vector_float3, vector_float3)
-	
-	init() {
-		normals = (.zero, .zero, .zero)
-		colors  = (.zero, .zero, .zero)
-	}
+
+    init() {
+        normals = (.zero, .zero, .zero)
+        colors  = (.zero, .zero, .zero)
+    }
 }

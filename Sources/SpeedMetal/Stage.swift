@@ -373,29 +373,29 @@ class Stage {
 
         let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
             transform = matrix4x4_translation(x * 2.5, y * 2.5, 0.0)
-            
+
             let lightMeshInstance = GeometryInstance(
                 geometry: lightMesh,
                 transform: transform,
                 mask: GEOMETRY_MASK_LIGHT)
             stage.addGeometryInstance(instance: lightMeshInstance)
-            
+
             let geometryMeshInstance = GeometryInstance(
                 geometry: geometryMesh,
                 transform: transform,
                 mask: GEOMETRY_MASK_TRIANGLE)
             stage.addGeometryInstance(instance: geometryMeshInstance)
-            
+
             let sphereGeometryInstance = GeometryInstance(
                 geometry: sphereGeometry,
                 transform: transform,
                 mask: GEOMETRY_MASK_SPHERE)
             stage.addGeometryInstance(instance: sphereGeometryInstance)
-            
+
             let r = Float.random(in: 0.0...1.0)
             let g = Float.random(in: 0.0...1.0)
             let b = Float.random(in: 0.0...1.0)
-            
+
             let areaLight = AreaLight(
                 position: vector_float3(x * 2.5, y * 2.5 + 1.98, 2.0),
                 forward: vector_float3(0.0, -1.0, 0.0),
