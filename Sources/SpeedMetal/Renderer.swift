@@ -37,7 +37,7 @@ class Renderer: NSObject, MTKViewDelegate {
     private var maxFramesSignal: DispatchSemaphore!
     private var frameSize: CGSize        = .zero
     private var frameIndex: UInt32       = 1
-    private var framesToRender: UInt32   = 1
+    private var framesToRender: UInt32   = 100
 
     private var uniformBufferOffset      = 0
     private var uniformBufferIndex       = 0
@@ -55,29 +55,36 @@ class Renderer: NSObject, MTKViewDelegate {
         self.device = device
         self.stage = stage
         super.init()
-        loadMetal()
+        
+        maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
+        
+        library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
+        queue   = device.makeCommandQueue()!
 
-        reset()
+        reset(stage: stage)
     }
 
-    func reset(stage: Stage? = nil) -> Void {
-        if let stage = stage {
-            self.stage = stage
-        }
-
-        maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
-
+    func reset(stage: Stage) -> Void {
+        self.stage = stage
+        
         createBuffers()
         createAccelerationStructures()
         createPipelines()
+        
+        frameIndex = 1
 
-        let zeroes = Array<vector_float4>(repeating: vector_float4(x: 0, y: 0, z: 0, w: 0), count: Int(frameSize.width * frameSize.height))
-        for target in accumulationTargets {
-            target.replace(
-            region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
-            mipmapLevel: 0,
-            withBytes: &zeroes,
-            bytesPerRow: MemoryLayout<vector_float4>.size * Int(frameSize.width))
+        guard
+            let accumulationTargets = accumulationTargets
+        else { return }
+        
+        let zeroes = Array<vector_float4>(repeating: .zero, count: Int(frameSize.width * frameSize.height))
+        
+        for accumulationTarget in accumulationTargets {
+            accumulationTarget.replace(
+                region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
+                mipmapLevel: 0,
+                withBytes: zeroes,
+                bytesPerRow: MemoryLayout<vector_float4>.size * Int(frameSize.width))
         }
     }
 
@@ -247,14 +254,6 @@ class Renderer: NSObject, MTKViewDelegate {
         }
 
         commandBuffer.commit()
-    }
-
-    private func loadMetal() -> Void {
-        let compileOptions = MTLCompileOptions()
-        compileOptions.languageVersion = .version3_0
-
-        library = try! device.makeLibrary(source: shadersMetal, options: compileOptions)
-        queue   = device.makeCommandQueue()!
     }
 
     private func createBuffers() -> Void {

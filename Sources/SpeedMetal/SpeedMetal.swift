@@ -39,7 +39,7 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
 
         let stage = Stage.hoistCornellBox(lineUp: control.lineUp, device: uiView.device!)
         (uiView.delegate as! Renderer).reset(stage: stage)
-
+        
         uiView.isPaused = false
     }
 }
@@ -70,6 +70,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
+                .disabled(control.lineUp == .oneByOne)
                 Button {
                     control.lineUp = .twoByTwo
                 } label: {
@@ -77,6 +78,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
+                .disabled(control.lineUp == .twoByTwo)
                 Button {
                     control.lineUp = .threeByThree
                 } label: {
@@ -84,6 +86,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
+                .disabled(control.lineUp == .threeByThree)
          }
          .padding(.bottom, 8)
         }
