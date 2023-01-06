@@ -8,7 +8,7 @@ class RendererControl: ObservableObject {
     @Published var lineUp = LineUp.threeByThree
 }
 
-class Renderer: NSObject, MTKViewDelegate {
+class Renderer: NSObject {
     private var device: MTLDevice
     private var stage:  Stage
 
@@ -88,51 +88,6 @@ class Renderer: NSObject, MTKViewDelegate {
         }
     }
 
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        frameSize.width  = size.width / upscaleFactor
-        frameSize.height = size.height / upscaleFactor
-
-        let textureDescriptor         = MTLTextureDescriptor()
-        textureDescriptor.pixelFormat = .rgba32Float
-        textureDescriptor.textureType = .type2D
-        textureDescriptor.width       = Int(frameSize.width)
-        textureDescriptor.height      = Int(frameSize.height)
-        textureDescriptor.storageMode = .shared
-        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
-
-        accumulationTargets = [
-            device.makeTexture(descriptor: textureDescriptor)!,
-            device.makeTexture(descriptor: textureDescriptor)!
-        ]
-
-        if useSpatialUpscaler {
-            textureDescriptor.width  = Int(frameSize.width * upscaleFactor)
-            textureDescriptor.height = Int(frameSize.height * upscaleFactor)
-            upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
-
-            createSpatialUpscaler()
-        }
-
-        var randomValues = [UInt32](repeating: 0, count: Int(frameSize.width * frameSize.height))
-
-        for i in 0..<Int(frameSize.width * frameSize.height) {
-            randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
-        }
-
-        textureDescriptor.pixelFormat = .r32Uint
-        textureDescriptor.storageMode = .shared
-        textureDescriptor.usage       = .shaderRead
-
-        randomTexture = device.makeTexture(descriptor: textureDescriptor)!
-        randomTexture.replace(
-            region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
-            mipmapLevel: 0,
-            withBytes: &randomValues,
-            bytesPerRow: MemoryLayout<UInt32>.size * Int(frameSize.width))
-
-        frameCount = 1
-    }
-
     private func updateUniforms() -> Void {
         uniformsBufferOffset = alignedUniformsSize * uniformsBufferIndex
 
@@ -167,90 +122,6 @@ class Renderer: NSObject, MTKViewDelegate {
         uniforms.pointee.lightCount    = stage.lightCount
 
         uniformsBufferIndex = (uniformsBufferIndex + 1) % maxFramesInFlight
-    }
-
-    func draw(in view: MTKView) -> Void {
-        if frameCount % framesToRender == 0 {
-            view.isPaused = true
-        }
-
-        maxFramesSignal.wait()
-
-        let commandBuffer = queue.makeCommandBuffer()!
-        commandBuffer.addCompletedHandler() { [self] _ in
-            maxFramesSignal.signal()
-        }
-
-        updateUniforms()
-
-        let width  = Int(frameSize.width)
-        let height = Int(frameSize.height)
-
-        let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
-        let threadgroups          = MTLSizeMake(
-            (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
-            (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
-
-        let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
-
-        computeEncoder.setBuffer(uniformsBuffer, offset: uniformsBufferOffset, index: 0)
-        if !usePerPrimitiveData {
-            computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
-        }
-        computeEncoder.setBuffer(instanceBuffer, offset: 0, index: 2)
-        computeEncoder.setBuffer(stage.lightBuffer, offset: 0, index: 3)
-
-        computeEncoder.setAccelerationStructure(instanceAccelerationStructure, bufferIndex: 4)
-        computeEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 5)
-
-        computeEncoder.setTexture(randomTexture, index: 0)
-        computeEncoder.setTexture(accumulationTargets[0], index: 1)
-        computeEncoder.setTexture(accumulationTargets[1], index: 2)
-
-        for geometry in stage.geometries {
-            for resource in (geometry as! Geometry).resources() {
-                computeEncoder.useResource(resource, usage: .read)
-            }
-        }
-
-        for primitiveAccelerationStructure in primitiveAccelerationStructures {
-            computeEncoder.useResource(primitiveAccelerationStructure as! MTLResource, usage: .read)
-        }
-
-        computeEncoder.setComputePipelineState(raycerPipeline)
-
-        computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
-        computeEncoder.endEncoding()
-
-        accumulationTargets.swapAt(0, 1)
-
-        if useSpatialUpscaler {
-            spatialUpscaler.colorTexture = accumulationTargets[0]
-            spatialUpscaler.outputTexture = upscaledTarget
-            spatialUpscaler.encode(commandBuffer: commandBuffer)
-        }
-
-        if let currentDrawable = view.currentDrawable {
-            let renderPassDescriptor = MTLRenderPassDescriptor()
-            renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
-            renderPassDescriptor.colorAttachments[0].loadAction = .clear
-            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
-
-            let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
-            renderEncoder.setRenderPipelineState(shaderPipeline)
-            if useSpatialUpscaler {
-                renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
-            } else {
-                renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
-            }
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-
-            renderEncoder.endEncoding()
-
-            commandBuffer.present(currentDrawable)
-        }
-
-        commandBuffer.commit()
     }
 
     private func createBuffers() -> Void {
@@ -511,6 +382,134 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
 extension Renderer: MTKViewDelegate {
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
+        frameSize.width  = size.width / upscaleFactor
+        frameSize.height = size.height / upscaleFactor
+
+        let textureDescriptor         = MTLTextureDescriptor()
+        textureDescriptor.pixelFormat = .rgba32Float
+        textureDescriptor.textureType = .type2D
+        textureDescriptor.width       = Int(frameSize.width)
+        textureDescriptor.height      = Int(frameSize.height)
+        textureDescriptor.storageMode = .shared
+        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
+
+        accumulationTargets = [
+            device.makeTexture(descriptor: textureDescriptor)!,
+            device.makeTexture(descriptor: textureDescriptor)!
+        ]
+
+        if useSpatialUpscaler {
+            textureDescriptor.width  = Int(frameSize.width * upscaleFactor)
+            textureDescriptor.height = Int(frameSize.height * upscaleFactor)
+            upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
+
+            createSpatialUpscaler()
+        }
+
+        var randomValues = [UInt32](repeating: 0, count: Int(frameSize.width * frameSize.height))
+
+        for i in 0..<Int(frameSize.width * frameSize.height) {
+            randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
+        }
+
+        textureDescriptor.pixelFormat = .r32Uint
+        textureDescriptor.storageMode = .shared
+        textureDescriptor.usage       = .shaderRead
+
+        randomTexture = device.makeTexture(descriptor: textureDescriptor)!
+        randomTexture.replace(
+            region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
+            mipmapLevel: 0,
+            withBytes: &randomValues,
+            bytesPerRow: MemoryLayout<UInt32>.size * Int(frameSize.width))
+
+        frameCount = 1
+    }
+
+    func draw(in view: MTKView) -> Void {
+        if frameCount % framesToRender == 0 {
+            view.isPaused = true
+        }
+
+        maxFramesSignal.wait()
+
+        let commandBuffer = queue.makeCommandBuffer()!
+        commandBuffer.addCompletedHandler() { [self] _ in
+            maxFramesSignal.signal()
+        }
+
+        updateUniforms()
+
+        let width  = Int(frameSize.width)
+        let height = Int(frameSize.height)
+
+        let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
+        let threadgroups          = MTLSizeMake(
+            (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
+            (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
+
+        let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
+
+        computeEncoder.setBuffer(uniformsBuffer, offset: uniformsBufferOffset, index: 0)
+        if !usePerPrimitiveData {
+            computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
+        }
+        computeEncoder.setBuffer(instanceBuffer, offset: 0, index: 2)
+        computeEncoder.setBuffer(stage.lightBuffer, offset: 0, index: 3)
+
+        computeEncoder.setAccelerationStructure(instanceAccelerationStructure, bufferIndex: 4)
+        computeEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 5)
+
+        computeEncoder.setTexture(randomTexture, index: 0)
+        computeEncoder.setTexture(accumulationTargets[0], index: 1)
+        computeEncoder.setTexture(accumulationTargets[1], index: 2)
+
+        for geometry in stage.geometries {
+            for resource in (geometry as! Geometry).resources() {
+                computeEncoder.useResource(resource, usage: .read)
+            }
+        }
+
+        for primitiveAccelerationStructure in primitiveAccelerationStructures {
+            computeEncoder.useResource(primitiveAccelerationStructure as! MTLResource, usage: .read)
+        }
+
+        computeEncoder.setComputePipelineState(raycerPipeline)
+
+        computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
+        computeEncoder.endEncoding()
+
+        accumulationTargets.swapAt(0, 1)
+
+        if useSpatialUpscaler {
+            spatialUpscaler.colorTexture = accumulationTargets[0]
+            spatialUpscaler.outputTexture = upscaledTarget
+            spatialUpscaler.encode(commandBuffer: commandBuffer)
+        }
+
+        if let currentDrawable = view.currentDrawable {
+            let renderPassDescriptor = MTLRenderPassDescriptor()
+            renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
+            renderPassDescriptor.colorAttachments[0].loadAction = .clear
+            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
+
+            let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
+            renderEncoder.setRenderPipelineState(shaderPipeline)
+            if useSpatialUpscaler {
+                renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
+            } else {
+                renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
+            }
+            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+
+            renderEncoder.endEncoding()
+
+            commandBuffer.present(currentDrawable)
+        }
+
+        commandBuffer.commit()
+    }
 }
 
     private func createSpatialUpscaler() -> Void {
