@@ -6,7 +6,7 @@ import simd
 
 class RendererControl: ObservableObject {
     @Published var lineUp = LineUp.threeByThree
-    var framesToRender: UInt32 = 10
+    @Published var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = true
     var useSpatialUpscaler     = false
     var upscaleFactor: Float   = 2.0

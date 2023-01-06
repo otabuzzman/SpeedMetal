@@ -22,11 +22,11 @@ class SMView: MTKView {
 }
 
 struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
-    @EnvironmentObject var control: RendererControl
-
+    var control: RendererControl
     var content: Content
 
-    init(content: () -> Content) {
+    init(control: RendererControl, content: () -> Content) {
+        self.control = control
         self.content = content()
     }
 
@@ -50,7 +50,7 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
-            SMViewAdapter() {
+            SMViewAdapter(control: control) {
                 SMView() { this in
                     let stage = Stage.hoistCornellBox(lineUp: .oneByOne, device: this.device!)
 
@@ -61,8 +61,25 @@ struct SpeedMetal: App {
                     this.delegate = this.renderer
                 }
             }
-            .environmentObject(control)
             HStack {
+                Button {
+                    control.framesToRender = 1
+                } label: {
+                    Text("1x")
+                        .frame(width: 42, height: 42)
+                }
+                Button {
+                    control.framesToRender = 10
+                } label: {
+                    Text("10x")
+                        .frame(width: 42, height: 42)
+                }
+                Button {
+                    control.framesToRender = 100
+                } label: {
+                    Text("100x")
+                        .frame(width: 42, height: 42)
+                }
                 Button {
                     control.lineUp = .oneByOne
                 } label: {
