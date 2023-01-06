@@ -184,7 +184,7 @@ class Renderer: NSObject {
             let accelDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
             accelDescriptor.geometryDescriptors = [geometryDescriptor]
 
-            let accelerationStructure = makeAccelerationStructure(accelDescriptor)
+            let accelerationStructure = makeAccelerationStructure(descriptor: accelDescriptor)
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 

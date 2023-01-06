@@ -403,16 +403,16 @@ class Stage {
 
         switch lineUp {
         case .oneByOne:
-            viewerStandingAtLocation = vector_float3(0.0, 0.0, 5.0)
+            stage.viewerStandingAtLocation = vector_float3(0.0, 0.0, 5.0)
             hoistInstances(0.0, 0.0)
         case .twoByTwo:
-            viewerStandingAtLocation = vector_float3(0.0, 0.0, 8.5)
+            stage.viewerStandingAtLocation = vector_float3(0.0, 0.0, 8.5)
             hoistInstances(-0.5, -0.5)
             hoistInstances( 0.5, -0.5)
             hoistInstances(-0.5,  0.5)
             hoistInstances( 0.5,  0.5)
         case .threeByThree:
-            viewerStandingAtLocation = vector_float3(0.0, 0.0, 12.0)
+            stage.viewerStandingAtLocation = vector_float3(0.0, 0.0, 12.0)
             for y in -1...1 {
                 for x in -1...1 {
                     hoistInstances(Float(x), Float(y))
