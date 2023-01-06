@@ -299,7 +299,7 @@ enum LineUp {
 }
 
 class Stage {
-    private(set) var device:      MTLDevice
+    private(set) var device: MTLDevice
 
     private(set) var geometries: NSMutableArray = []
     private(set) var instances = [GeometryInstance]()

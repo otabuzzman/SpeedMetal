@@ -68,11 +68,12 @@ class Renderer: NSObject {
     func reset(stage: Stage) -> Void {
         self.stage = stage
 
+        frameCount      = 1
+        resourcesStride = 0
+
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
-
-        frameCount = 1
 
         guard
             let accumulationTargets = accumulationTargets
@@ -91,10 +92,24 @@ class Renderer: NSObject {
 
     private func updateUniforms() -> Void {
         uniformsBufferOffset = alignedUniformsSize * uniformsBufferIndex
+        uniformsBufferIndex  = (uniformsBufferIndex + 1) % maxFramesInFlight
 
         let uniforms = uniformsBuffer.contents()
             .advanced(by: uniformsBufferOffset)
             .bindMemory(to: Uniforms.self, capacity: 1)
+
+        uniforms.pointee.width  = UInt32(frameWidth)
+        uniforms.pointee.height = UInt32(frameHeight)
+
+        uniforms.pointee.frameCount  = frameCount
+        frameCount                  += 1
+
+        uniforms.pointee.lightCount  = stage.lightCount
+
+        let fieldOfView: Float = 45.0 * (Float.pi / 180.0 )
+        let aspectRatio        = Float(frameWidth) / Float(frameHeight)
+        let imagePlaneHeight   = tanf(fieldOfView / 2.0)
+        let imagePlaneWidth    = aspectRatio * imagePlaneHeight
 
         let position = stage.viewerStandingAtLocation
         let forward  = simd_normalize(stage.viewerLookingAtLocation - position)
@@ -103,26 +118,8 @@ class Renderer: NSObject {
 
         uniforms.pointee.camera.position = position
         uniforms.pointee.camera.forward  = forward
-        uniforms.pointee.camera.right    = right
-        uniforms.pointee.camera.up       = up
-
-        let fieldOfView: Float = 45.0 * (Float.pi / 180.0 )
-        let aspectRatio        = Float(frameWidth) / Float(frameHeight)
-        let imagePlaneHeight   = tanf(fieldOfView / 2.0)
-        let imagePlaneWidth    = aspectRatio * imagePlaneHeight
-
-        uniforms.pointee.camera.right *= imagePlaneWidth
-        uniforms.pointee.camera.up    *= imagePlaneHeight
-
-        uniforms.pointee.width         = UInt32(frameWidth)
-        uniforms.pointee.height        = UInt32(frameHeight)
-
-        uniforms.pointee.frameCount    = frameCount
-        frameCount                    += 1
-
-        uniforms.pointee.lightCount    = stage.lightCount
-
-        uniformsBufferIndex = (uniformsBufferIndex + 1) % maxFramesInFlight
+        uniforms.pointee.camera.right    = right * imagePlaneWidth
+        uniforms.pointee.camera.up       = up * imagePlaneHeight
     }
 
     private func createBuffers() -> Void {
@@ -132,8 +129,6 @@ class Renderer: NSObject {
             options: [.storageModeShared])
 
         stage.uploadToBuffers()
-
-        resourcesStride = 0
 
         for geometry in stage.geometries {
             let geometry = geometry as! Geometry
