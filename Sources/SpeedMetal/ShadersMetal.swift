@@ -333,7 +333,7 @@ float3 transformDirection(float3 p, float4x4 transform) {
 }
 
 // Main ray tracing kernel.
-kernel void raytracingKernel(
+kernel void raycerKernel(
      uint2                                                  tid                       [[thread_position_in_grid]],
      constant Uniforms &                                    uniforms                  [[buffer(0)]],
      texture2d<unsigned int>                                randomTex                 [[texture(0)]],

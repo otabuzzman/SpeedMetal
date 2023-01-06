@@ -237,9 +237,9 @@ class Renderer: NSObject {
             intersectionFunctions[geometry.intersectionFunctionName] = intersectionFunction
         }
 
-        let raytracingFunction = makeSpecializedFunction(withName: "raytracingKernel")
+        let raycerFunction = makeSpecializedFunction(withName: "raycerKernel")
 
-        raycerPipeline = makeComputePipelineState(withFunction: raytracingFunction, linkedFunctions: Array<MTLFunction>(intersectionFunctions.values))
+        raycerPipeline = makeRaycerPipelineState(withFunction: raycerFunction, intersectionFunctions: Array<MTLFunction>(intersectionFunctions.values))
 
         if useIntersectionFunctions {
             let intersectionFunctionTableDescriptor = MTLIntersectionFunctionTableDescriptor()
@@ -263,53 +263,53 @@ class Renderer: NSObject {
             }
         }
 
-        let renderDescriptor = MTLRenderPipelineDescriptor()
-        renderDescriptor.vertexFunction   = library.makeFunction(name: "copyVertex")
-        renderDescriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
-        renderDescriptor.colorAttachments[0].pixelFormat = .rgba16Float
+        let descriptor = MTLRenderPipelineDescriptor()
+        descriptor.vertexFunction   = library.makeFunction(name: "copyVertex")
+        descriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
+        descriptor.colorAttachments[0].pixelFormat = .rgba16Float
 
-        let renderBinaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
+        let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
         do {
-            let renderBinaryArchive = try device.makeBinaryArchive(descriptor: renderBinaryArchiveDescriptor)
-            try renderBinaryArchive.addRenderPipelineFunctions(descriptor: renderDescriptor)
-            // try renderBinaryArchive.serialize(to: URL(string: "shader.metallib")!)
+            let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+            try binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
+            // try binaryArchive.serialize(to: URL(string: "shader.metallib")!)
         } catch {
             fatalError(String(format: "harvest shader binary archive failed: \(error)"))
         }
 
         do {
-            shaderPipeline = try device.makeRenderPipelineState(descriptor: renderDescriptor)
+            shaderPipeline = try device.makeRenderPipelineState(descriptor: descriptor)
         } catch {
             fatalError(String(format: "makeRenderPipelineState failed: \(error)"))
         }
     }
 
-    private func makeComputePipelineState(withFunction function: MTLFunction, linkedFunctions: [MTLFunction]) -> MTLComputePipelineState {
-        var mtlLinkedFunctions: MTLLinkedFunctions?
-        var pipeline:           MTLComputePipelineState
+    private func makeRaycerPipelineState(withFunction raycerFunction: MTLFunction, intersectionFunctions: [MTLFunction]) -> MTLComputePipelineState {
+        var linkedFunctions: MTLLinkedFunctions?
+        var pipeline:        MTLComputePipelineState
 
         if !linkedFunctions.isEmpty {
-            mtlLinkedFunctions = MTLLinkedFunctions()
-            mtlLinkedFunctions!.functions = linkedFunctions
+            linkedFunctions = MTLLinkedFunctions()
+            linkedFunctions!.functions = intersectionFunctions
         }
 
-        let computeDescriptor = MTLComputePipelineDescriptor()
-        computeDescriptor.computeFunction                                 = function
-        computeDescriptor.linkedFunctions                                 = mtlLinkedFunctions
-        computeDescriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
+        let descriptor = MTLComputePipelineDescriptor()
+        descriptor.computeFunction                                 = raycerFunction
+        descriptor.linkedFunctions                                 = linkedFunctions
+        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
 
-        let computeBinaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
+        let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
         do {
-            let computeBinaryArchive = try device.makeBinaryArchive(descriptor: computeBinaryArchiveDescriptor)
-            try computeBinaryArchive.addComputePipelineFunctions(descriptor: computeDescriptor)
-            // try computeBinaryArchive.serialize(to: URL(string: "raycer.metallib")!)
+            let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+            try binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
+            // try binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
         } catch {
-            fatalError(String(format: "harvest compute binary archive failed: \(error)"))
+            fatalError(String(format: "harvest raycer binary archive failed: \(error)"))
         }
 
         do {
             pipeline = try device.makeComputePipelineState(
-                descriptor: computeDescriptor, options: MTLPipelineOption(), reflection: nil)
+                descriptor: descriptor, options: MTLPipelineOption(), reflection: nil)
         } catch {
             fatalError(String(format: "makeComputePipelineState failed: \(error)"))
         }
