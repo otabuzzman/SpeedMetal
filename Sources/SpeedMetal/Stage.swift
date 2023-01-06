@@ -149,11 +149,11 @@ class TriangleGeometry: Geometry {
         }
     }
 
-    private func addCubeFace(withVertices vertices: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
-        let v0 = vertices[Int(i0)]
-        let v1 = vertices[Int(i1)]
-        let v2 = vertices[Int(i2)]
-        let v3 = vertices[Int(i3)]
+    private func addCubeFace(withVertices list: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
+        let v0 = list[Int(i0)]
+        let v1 = list[Int(i1)]
+        let v2 = list[Int(i2)]
+        let v3 = list[Int(i3)]
 
         var n0 = getTriangleNormal(v0, v1, v2)
         var n1 = getTriangleNormal(v0, v2, v3)

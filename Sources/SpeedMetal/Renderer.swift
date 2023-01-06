@@ -50,7 +50,7 @@ class Renderer: NSObject {
 
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
-    private var upscaleFactor = 2.0
+    private var upscaleFactor: Float = 2.0
 
     init(device: MTLDevice, stage: Stage) {
         self.device = device
@@ -396,8 +396,8 @@ class Renderer: NSObject {
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        frameWidth  = Int(size.width / upscaleFactor)
-        frameHeight = Int(size.height / upscaleFactor)
+        frameWidth  = Int(Float(size.width) / upscaleFactor)
+        frameHeight = Int(Float(size.height) / upscaleFactor)
 
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
