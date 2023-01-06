@@ -107,8 +107,8 @@ class TriangleGeometry: Geometry {
         [indexBuffer, vertexNormalBuffer, vertexColorBuffer]
     }
 
-    func addCube(withFaces faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
-        var cubeVertices = [
+    func addCube(withFaces mask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
+        var vertices = [
             vector_float3(-0.5, -0.5, -0.5),
             vector_float3( 0.5, -0.5, -0.5),
             vector_float3(-0.5,  0.5, -0.5),
@@ -120,15 +120,15 @@ class TriangleGeometry: Geometry {
         ]
 
         for i in 0..<8 {
-            let vertex = cubeVertices[i]
+            let vertex = vertices[i]
 
             var transformedVertex = simd_make_float4(vertex, 1.0)
             transformedVertex     = transform * transformedVertex
 
-            cubeVertices[i] = simd_make_float3(transformedVertex)
+            vertices[i] = simd_make_float3(transformedVertex)
         }
 
-        let cubeIndices: [[UInt16]] = [
+        let indices: [[UInt16]] = [
             [0, 4, 6, 2],
             [1, 3, 7, 5],
             [0, 1, 5, 4],
@@ -138,22 +138,22 @@ class TriangleGeometry: Geometry {
         ]
 
         for face in 0..<6 {
-            if faceMask & (1 << face) > 0 {
+            if mask & (1 << face) > 0 {
                 addCubeFace(
-                    with: cubeVertices,
+                    withVertices: vertices,
                     color: color,
-                    i0: cubeIndices[face][0], i1: cubeIndices[face][1],
-                    i2: cubeIndices[face][2], i3: cubeIndices[face][3],
+                    i0: indices[face][0], i1: indices[face][1],
+                    i2: indices[face][2], i3: indices[face][3],
                     inwardNormals: inwardNormals)
             }
         }
     }
 
-    private func addCubeFace(with cubeVertices: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
-        let v0 = cubeVertices[Int(i0)]
-        let v1 = cubeVertices[Int(i1)]
-        let v2 = cubeVertices[Int(i2)]
-        let v3 = cubeVertices[Int(i3)]
+    private func addCubeFace(withVertices vertices: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
+        let v0 = vertices[Int(i0)]
+        let v1 = vertices[Int(i1)]
+        let v2 = vertices[Int(i2)]
+        let v3 = vertices[Int(i3)]
 
         var n0 = getTriangleNormal(v0, v1, v2)
         var n1 = getTriangleNormal(v0, v2, v3)

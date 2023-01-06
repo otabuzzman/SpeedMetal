@@ -12,7 +12,8 @@ class Renderer: NSObject {
     private var device: MTLDevice
     private var stage:  Stage
 
-    private var frameSize: CGSize      = .zero
+    private var frameWidth: Int  = 0
+    private var frameHeight: Int = 0
     private var frameCount: UInt32     = 1
     private var framesToRender: UInt32 = 100
 
@@ -69,7 +70,7 @@ class Renderer: NSObject {
 
         createBuffers()
         createAccelerationStructures()
-        createPipelines()
+        createRaycerAndShaderPipelines()
 
         frameCount = 1
 
@@ -77,14 +78,14 @@ class Renderer: NSObject {
             let accumulationTargets = accumulationTargets
         else { return }
 
-        let zeroes = Array<vector_float4>(repeating: .zero, count: Int(frameSize.width * frameSize.height))
+        let zeroes = Array<vector_float4>(repeating: .zero, count: frameWidth * frameHeight)
 
         for accumulationTarget in accumulationTargets {
             accumulationTarget.replace(
-                region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
+                region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
                 mipmapLevel: 0,
                 withBytes: zeroes,
-                bytesPerRow: MemoryLayout<vector_float4>.size * Int(frameSize.width))
+                bytesPerRow: MemoryLayout<vector_float4>.size * frameWidth)
         }
     }
 
@@ -106,15 +107,15 @@ class Renderer: NSObject {
         uniforms.pointee.camera.up       = up
 
         let fieldOfView: Float = 45.0 * (Float.pi / 180.0 )
-        let aspectRatio        = Float(frameSize.width) / Float(frameSize.height)
+        let aspectRatio        = Float(frameWidth) / Float(frameHeight)
         let imagePlaneHeight   = tanf(fieldOfView / 2.0)
         let imagePlaneWidth    = aspectRatio * imagePlaneHeight
 
         uniforms.pointee.camera.right *= imagePlaneWidth
         uniforms.pointee.camera.up    *= imagePlaneHeight
 
-        uniforms.pointee.width         = UInt32(frameSize.width)
-        uniforms.pointee.height        = UInt32(frameSize.height)
+        uniforms.pointee.width         = UInt32(frameWidth)
+        uniforms.pointee.height        = UInt32(frameHeight)
 
         uniforms.pointee.frameCount    = frameCount
         frameCount                    += 1
@@ -214,7 +215,7 @@ class Renderer: NSObject {
         instanceAccelerationStructure = makeAccelerationStructure(descriptor: accelDescriptor)
     }
 
-    private func createPipelines() -> Void {
+    private func createRaycerAndShaderPipelines() -> Void {
         for geometry in stage.geometries {
             if !(geometry as! Geometry).intersectionFunctionName.isEmpty {
                 useIntersectionFunctions = true
@@ -337,19 +338,17 @@ class Renderer: NSObject {
 
     private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
         let accelSizes            = device.accelerationStructureSizes(descriptor: descriptor)
-        let accelerationStructure = device.makeAccelerationStructure(
-            size: accelSizes.accelerationStructureSize)!
+        let accelerationStructure = device.makeAccelerationStructure(size: accelSizes.accelerationStructureSize)!
 
         let scratchBuffer         = device.makeBuffer(
             length: accelSizes.buildScratchBufferSize,
             options: .storageModePrivate)
-
-        var commandBuffer         = queue.makeCommandBuffer()!
-        var commandEncoder        = commandBuffer.makeAccelerationStructureCommandEncoder()!
-
         let compactedSizeBuffer   = device.makeBuffer(
             length: MemoryLayout<UInt32>.stride,
             options: .storageModeShared)!
+
+        var commandBuffer         = queue.makeCommandBuffer()!
+        var commandEncoder        = commandBuffer.makeAccelerationStructureCommandEncoder()!
 
         commandEncoder.build(
             accelerationStructure: accelerationStructure,
@@ -383,10 +382,10 @@ class Renderer: NSObject {
 
     private func createSpatialUpscaler() -> Void {
         let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
-        upscalerDescriptor.inputWidth   = Int(frameSize.width)
-        upscalerDescriptor.inputHeight  = Int(frameSize.height)
-        upscalerDescriptor.outputWidth  = Int(frameSize.width * upscaleFactor)
-        upscalerDescriptor.outputHeight = Int(frameSize.height * upscaleFactor)
+        upscalerDescriptor.inputWidth   = frameWidth
+        upscalerDescriptor.inputHeight  = frameHeight
+        upscalerDescriptor.outputWidth  = Int(Float(frameWidth) * upscaleFactor)
+        upscalerDescriptor.outputHeight = Int(Float(frameHeight) * upscaleFactor)
         upscalerDescriptor.colorTextureFormat  = .rgba32Float
         upscalerDescriptor.outputTextureFormat = .rgba32Float
         upscalerDescriptor.colorProcessingMode = .perceptual
@@ -397,14 +396,14 @@ class Renderer: NSObject {
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        frameSize.width  = size.width / upscaleFactor
-        frameSize.height = size.height / upscaleFactor
+        frameWidth  = Int(size.width / upscaleFactor)
+        frameHeight = Int(size.height / upscaleFactor)
 
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
         textureDescriptor.textureType = .type2D
-        textureDescriptor.width       = Int(frameSize.width)
-        textureDescriptor.height      = Int(frameSize.height)
+        textureDescriptor.width       = frameWidth
+        textureDescriptor.height      = frameHeight
         textureDescriptor.storageMode = .shared
         textureDescriptor.usage       = [.shaderRead, .shaderWrite]
 
@@ -414,16 +413,16 @@ extension Renderer: MTKViewDelegate {
         ]
 
         if useSpatialUpscaler {
-            textureDescriptor.width  = Int(frameSize.width * upscaleFactor)
-            textureDescriptor.height = Int(frameSize.height * upscaleFactor)
+            textureDescriptor.width  = Int(Float(frameWidth) * upscaleFactor)
+            textureDescriptor.height = Int(Float(frameHeight) * upscaleFactor)
             upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
 
             createSpatialUpscaler()
         }
 
-        var randomValues = [UInt32](repeating: 0, count: Int(frameSize.width * frameSize.height))
+        var randomValues = [UInt32](repeating: 0, count: frameWidth * frameHeight)
 
-        for i in 0..<Int(frameSize.width * frameSize.height) {
+        for i in 0..<frameWidth * frameHeight {
             randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
         }
 
@@ -433,10 +432,10 @@ extension Renderer: MTKViewDelegate {
 
         randomTexture = device.makeTexture(descriptor: textureDescriptor)!
         randomTexture.replace(
-            region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
+            region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
             mipmapLevel: 0,
             withBytes: &randomValues,
-            bytesPerRow: MemoryLayout<UInt32>.size * Int(frameSize.width))
+            bytesPerRow: MemoryLayout<UInt32>.size * frameWidth)
 
         frameCount = 1
     }
@@ -448,20 +447,17 @@ extension Renderer: MTKViewDelegate {
 
         maxFramesSignal.wait()
 
+        updateUniforms()
+
+        let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
+        let threadgroups          = MTLSizeMake(
+            (frameWidth  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
+            (frameHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
+
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
         }
-
-        updateUniforms()
-
-        let width  = Int(frameSize.width)
-        let height = Int(frameSize.height)
-
-        let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
-        let threadgroups          = MTLSizeMake(
-            (width  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
-            (height + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
 
