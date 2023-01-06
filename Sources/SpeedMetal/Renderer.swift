@@ -396,8 +396,13 @@ class Renderer: NSObject {
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        frameWidth  = Int(Float(size.width) / upscaleFactor)
-        frameHeight = Int(Float(size.height) / upscaleFactor)
+        if useSpatialUpscaler {
+            frameWidth  = Int(Float(size.width) / upscaleFactor)
+            frameHeight = Int(Float(size.height) / upscaleFactor)
+        } else {
+            frameWidth  = Int(size.width)
+            frameHeight = Int(size.height)
+        }
 
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
