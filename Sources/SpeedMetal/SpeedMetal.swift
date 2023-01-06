@@ -57,7 +57,7 @@ struct SpeedMetal: App {
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
 
-                    this.renderer = Renderer(device: this.device!, stage: stage)
+                    this.renderer = Renderer(device: this.device!, stage: stage, control: control)
                     this.delegate = this.renderer
                 }
             }
