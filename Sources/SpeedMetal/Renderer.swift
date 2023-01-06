@@ -381,6 +381,20 @@ class Renderer: NSObject {
         return compactedAccelerationStructure
     }
 
+    private func createSpatialUpscaler() -> Void {
+        let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
+        upscalerDescriptor.inputWidth   = Int(frameSize.width)
+        upscalerDescriptor.inputHeight  = Int(frameSize.height)
+        upscalerDescriptor.outputWidth  = Int(frameSize.width * upscaleFactor)
+        upscalerDescriptor.outputHeight = Int(frameSize.height * upscaleFactor)
+        upscalerDescriptor.colorTextureFormat  = .rgba32Float
+        upscalerDescriptor.outputTextureFormat = .rgba32Float
+        upscalerDescriptor.colorProcessingMode = .perceptual
+
+        spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
+    }
+}
+
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
         frameSize.width  = size.width / upscaleFactor
@@ -509,20 +523,6 @@ extension Renderer: MTKViewDelegate {
         }
 
         commandBuffer.commit()
-    }
-}
-
-    private func createSpatialUpscaler() -> Void {
-        let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
-        upscalerDescriptor.inputWidth   = Int(frameSize.width)
-        upscalerDescriptor.inputHeight  = Int(frameSize.height)
-        upscalerDescriptor.outputWidth  = Int(frameSize.width * upscaleFactor)
-        upscalerDescriptor.outputHeight = Int(frameSize.height * upscaleFactor)
-        upscalerDescriptor.colorTextureFormat  = .rgba32Float
-        upscalerDescriptor.outputTextureFormat = .rgba32Float
-        upscalerDescriptor.colorProcessingMode = .perceptual
-
-        spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
     }
 }
 
