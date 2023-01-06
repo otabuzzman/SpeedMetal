@@ -288,7 +288,7 @@ class Renderer: NSObject {
         var linkedFunctions: MTLLinkedFunctions?
         var pipeline:        MTLComputePipelineState
 
-        if !linkedFunctions.isEmpty {
+        if !intersectionFunctions.isEmpty {
             linkedFunctions = MTLLinkedFunctions()
             linkedFunctions!.functions = intersectionFunctions
         }
