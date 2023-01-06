@@ -29,7 +29,7 @@ struct AreaLight {
 struct Uniforms {
     var width:      UInt32
     var height:     UInt32
-    var frameIndex: UInt32
+    var frameCount: UInt32
     var lightCount: UInt32
     var camera:     Camera
 }

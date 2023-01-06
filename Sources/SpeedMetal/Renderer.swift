@@ -12,37 +12,37 @@ class Renderer: NSObject, MTKViewDelegate {
     private var device: MTLDevice
     private var stage:  Stage
 
-    private let maxFramesInFlight   = 3
-    private let alignedUniformsSize = (MemoryLayout<Uniforms>.stride + 255) & ~255
+    private var frameSize: CGSize      = .zero
+    private var frameCount: UInt32     = 1
+    private var framesToRender: UInt32 = 100
+
+    private let maxFramesInFlight = 3
+    private var maxFramesSignal: DispatchSemaphore!
 
     private var queue:   MTLCommandQueue!
     private var library: MTLLibrary!
 
-    private var uniformBuffer: MTLBuffer!
+    private var uniformsBuffer: MTLBuffer!
+    private var uniformsBufferOffset = 0
+    private var uniformsBufferIndex  = 0
+    private let alignedUniformsSize  = (MemoryLayout<Uniforms>.stride + 255) & ~255
+
+    private var resourceBuffer: MTLBuffer!
+    private var resourcesStride: UInt32  = 0
+
+    private var instanceBuffer: MTLBuffer!
+
+    private var accumulationTargets: [MTLTexture]!
+    private var randomTexture:       MTLTexture!
 
     private var instanceAccelerationStructure:   MTLAccelerationStructure!
     private var primitiveAccelerationStructures: NSMutableArray!
 
-    private var raytracingPipeline:        MTLComputePipelineState!
-    private var copyPipeline:              MTLRenderPipelineState!
-
-    private var accumulationTargets:       [MTLTexture]!
-    private var randomTexture:             MTLTexture!
-
-    private var resourceBuffer:            MTLBuffer!
-    private var instanceBuffer:            MTLBuffer!
+    private var raycerPipeline: MTLComputePipelineState!
+    private var shaderPipeline: MTLRenderPipelineState!
 
     private var intersectionFunctionTable: MTLIntersectionFunctionTable!
 
-    private var maxFramesSignal: DispatchSemaphore!
-    private var frameSize: CGSize        = .zero
-    private var frameIndex: UInt32       = 1
-    private var framesToRender: UInt32   = 100
-
-    private var uniformBufferOffset      = 0
-    private var uniformBufferIndex       = 0
-
-    private var resourcesStride: UInt32  = 0
     private var useIntersectionFunctions = false
     private var usePerPrimitiveData      = true // Metal 3
     private var useSpatialUpscaler       = false
@@ -55,9 +55,9 @@ class Renderer: NSObject, MTKViewDelegate {
         self.device = device
         self.stage = stage
         super.init()
-        
+
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
-        
+
         library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
         queue   = device.makeCommandQueue()!
 
@@ -66,19 +66,19 @@ class Renderer: NSObject, MTKViewDelegate {
 
     func reset(stage: Stage) -> Void {
         self.stage = stage
-        
+
         createBuffers()
         createAccelerationStructures()
         createPipelines()
-        
-        frameIndex = 1
+
+        frameCount = 1
 
         guard
             let accumulationTargets = accumulationTargets
         else { return }
-        
+
         let zeroes = Array<vector_float4>(repeating: .zero, count: Int(frameSize.width * frameSize.height))
-        
+
         for accumulationTarget in accumulationTargets {
             accumulationTarget.replace(
                 region: MTLRegionMake2D(0, 0, Int(frameSize.width), Int(frameSize.height)),
@@ -89,7 +89,7 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        frameSize.width = size.width / upscaleFactor
+        frameSize.width  = size.width / upscaleFactor
         frameSize.height = size.height / upscaleFactor
 
         let textureDescriptor         = MTLTextureDescriptor()
@@ -130,50 +130,47 @@ class Renderer: NSObject, MTKViewDelegate {
             withBytes: &randomValues,
             bytesPerRow: MemoryLayout<UInt32>.size * Int(frameSize.width))
 
-        frameIndex = 1
+        frameCount = 1
     }
 
     private func updateUniforms() -> Void {
-        uniformBufferOffset = alignedUniformsSize * uniformBufferIndex
+        uniformsBufferOffset = alignedUniformsSize * uniformsBufferIndex
 
-        let uniforms = uniformBuffer.contents()
-            .advanced(by: uniformBufferOffset)
+        let uniforms = uniformsBuffer.contents()
+            .advanced(by: uniformsBufferOffset)
             .bindMemory(to: Uniforms.self, capacity: 1)
 
-        let position = stage.cameraPosition
-        let target   = stage.cameraTarget
-        var up       = stage.cameraUp
-
-        let forward  = simd_normalize(target - position)
-        let right    = simd_normalize(simd_cross(forward, up))
-        up           = simd_normalize(simd_cross(right, forward))
+        let position = stage.viewerStandingAtLocation
+        let forward  = simd_normalize(stage.viewerLookingAtLocation - position)
+        let right    = simd_normalize(simd_cross(forward, stage.viewerHeadingUpDirection))
+        let up       = simd_normalize(simd_cross(right, forward))
 
         uniforms.pointee.camera.position = position
         uniforms.pointee.camera.forward  = forward
         uniforms.pointee.camera.right    = right
         uniforms.pointee.camera.up       = up
 
-        let fieldOfView: Float   = 45.0 * (Float.pi / 180.0 )
-        let aspectRatio          = Float(frameSize.width) / Float(frameSize.height)
-        let imagePlaneHeight     = tanf(fieldOfView / 2.0)
-        let imagePlaneWidth      = aspectRatio * imagePlaneHeight
+        let fieldOfView: Float = 45.0 * (Float.pi / 180.0 )
+        let aspectRatio        = Float(frameSize.width) / Float(frameSize.height)
+        let imagePlaneHeight   = tanf(fieldOfView / 2.0)
+        let imagePlaneWidth    = aspectRatio * imagePlaneHeight
 
-        uniforms.pointee.camera.right   *= imagePlaneWidth
-        uniforms.pointee.camera.up      *= imagePlaneHeight
+        uniforms.pointee.camera.right *= imagePlaneWidth
+        uniforms.pointee.camera.up    *= imagePlaneHeight
 
-        uniforms.pointee.width           = UInt32(frameSize.width)
-        uniforms.pointee.height          = UInt32(frameSize.height)
+        uniforms.pointee.width         = UInt32(frameSize.width)
+        uniforms.pointee.height        = UInt32(frameSize.height)
 
-        uniforms.pointee.frameIndex      = frameIndex
-        frameIndex                      += 1
+        uniforms.pointee.frameCount    = frameCount
+        frameCount                    += 1
 
-        uniforms.pointee.lightCount      = stage.lightCount
+        uniforms.pointee.lightCount    = stage.lightCount
 
-        uniformBufferIndex = (uniformBufferIndex + 1) % maxFramesInFlight
+        uniformsBufferIndex = (uniformsBufferIndex + 1) % maxFramesInFlight
     }
 
     func draw(in view: MTKView) -> Void {
-        if frameIndex % framesToRender == 0 {
+        if frameCount % framesToRender == 0 {
             view.isPaused = true
         }
 
@@ -196,7 +193,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
 
-        computeEncoder.setBuffer(uniformBuffer, offset: uniformBufferOffset, index: 0)
+        computeEncoder.setBuffer(uniformsBuffer, offset: uniformsBufferOffset, index: 0)
         if !usePerPrimitiveData {
             computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
         }
@@ -220,7 +217,7 @@ class Renderer: NSObject, MTKViewDelegate {
             computeEncoder.useResource(primitiveAccelerationStructure as! MTLResource, usage: .read)
         }
 
-        computeEncoder.setComputePipelineState(raytracingPipeline)
+        computeEncoder.setComputePipelineState(raycerPipeline)
 
         computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
         computeEncoder.endEncoding()
@@ -240,7 +237,7 @@ class Renderer: NSObject, MTKViewDelegate {
             renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
 
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
-            renderEncoder.setRenderPipelineState(copyPipeline)
+            renderEncoder.setRenderPipelineState(shaderPipeline)
             if useSpatialUpscaler {
                 renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
             } else {
@@ -257,9 +254,9 @@ class Renderer: NSObject, MTKViewDelegate {
     }
 
     private func createBuffers() -> Void {
-        let uniformBufferSize = alignedUniformsSize * maxFramesInFlight
-        uniformBuffer = device.makeBuffer(
-            length: uniformBufferSize,
+        let uniformsBufferSize = alignedUniformsSize * maxFramesInFlight
+        uniformsBuffer = device.makeBuffer(
+            length: uniformsBufferSize,
             options: [.storageModeShared])
 
         stage.uploadToBuffers()
@@ -316,7 +313,7 @@ class Renderer: NSObject, MTKViewDelegate {
             let accelDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
             accelDescriptor.geometryDescriptors = [geometryDescriptor]
 
-            let accelerationStructure = newAccelerationStructure(accelDescriptor)
+            let accelerationStructure = makeAccelerationStructure(accelDescriptor)
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
@@ -343,7 +340,7 @@ class Renderer: NSObject, MTKViewDelegate {
         accelDescriptor.instanceCount                   = stage.instances.count
         accelDescriptor.instanceDescriptorBuffer        = instanceBuffer
 
-        instanceAccelerationStructure = newAccelerationStructure(accelDescriptor)
+        instanceAccelerationStructure = makeAccelerationStructure(descriptor: accelDescriptor)
     }
 
     private func createPipelines() -> Void {
@@ -365,19 +362,19 @@ class Renderer: NSObject, MTKViewDelegate {
             if let _ = intersectionFunctions.index(forKey: geometry.intersectionFunctionName) {
                 continue
             }
-            let intersectionFunction = specializedFunction(withName: geometry.intersectionFunctionName)
+            let intersectionFunction = makeSpecializedFunction(withName: geometry.intersectionFunctionName)
             intersectionFunctions[geometry.intersectionFunctionName] = intersectionFunction
         }
 
-        let raytracingFunction = specializedFunction(withName: "raytracingKernel")
+        let raytracingFunction = makeSpecializedFunction(withName: "raytracingKernel")
 
-        raytracingPipeline = newComputePipelineState(withFunction: raytracingFunction, linkedFunctions: Array<MTLFunction>(intersectionFunctions.values))
+        raycerPipeline = makeComputePipelineState(withFunction: raytracingFunction, linkedFunctions: Array<MTLFunction>(intersectionFunctions.values))
 
         if useIntersectionFunctions {
             let intersectionFunctionTableDescriptor = MTLIntersectionFunctionTableDescriptor()
             intersectionFunctionTableDescriptor.functionCount = stage.geometries.count
 
-            intersectionFunctionTable = raytracingPipeline.makeIntersectionFunctionTable(
+            intersectionFunctionTable = raycerPipeline.makeIntersectionFunctionTable(
                 descriptor: intersectionFunctionTableDescriptor)
 
             if !usePerPrimitiveData {
@@ -389,7 +386,7 @@ class Renderer: NSObject, MTKViewDelegate {
 
                 if !geometry.intersectionFunctionName.isEmpty {
                     let intersectionFunction = intersectionFunctions[geometry.intersectionFunctionName]
-                    let handle = raytracingPipeline.functionHandle(function: intersectionFunction!)
+                    let handle = raycerPipeline.functionHandle(function: intersectionFunction!)
                     intersectionFunctionTable.setFunction(handle, index: geometryIndex)
                 }
             }
@@ -410,13 +407,13 @@ class Renderer: NSObject, MTKViewDelegate {
         }
 
         do {
-            copyPipeline = try device.makeRenderPipelineState(descriptor: renderDescriptor)
+            shaderPipeline = try device.makeRenderPipelineState(descriptor: renderDescriptor)
         } catch {
             fatalError(String(format: "makeRenderPipelineState failed: \(error)"))
         }
     }
 
-    private func newComputePipelineState(withFunction function: MTLFunction, linkedFunctions: [MTLFunction]) -> MTLComputePipelineState {
+    private func makeComputePipelineState(withFunction function: MTLFunction, linkedFunctions: [MTLFunction]) -> MTLComputePipelineState {
         var mtlLinkedFunctions: MTLLinkedFunctions?
         var pipeline:           MTLComputePipelineState
 
@@ -449,7 +446,7 @@ class Renderer: NSObject, MTKViewDelegate {
         return pipeline
     }
 
-    private func specializedFunction(withName name: String) -> MTLFunction {
+    private func makeSpecializedFunction(withName name: String) -> MTLFunction {
         let constants       = MTLFunctionConstantValues()
         var resourcesStride = self.resourcesStride
         var function: MTLFunction
@@ -467,7 +464,7 @@ class Renderer: NSObject, MTKViewDelegate {
         return function
     }
 
-    private func newAccelerationStructure(_ descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
+    private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
         let accelSizes            = device.accelerationStructureSizes(descriptor: descriptor)
         let accelerationStructure = device.makeAccelerationStructure(
             size: accelSizes.accelerationStructureSize)!
@@ -512,6 +509,9 @@ class Renderer: NSObject, MTKViewDelegate {
 
         return compactedAccelerationStructure
     }
+
+extension Renderer: MTKViewDelegate {
+}
 
     private func createSpatialUpscaler() -> Void {
         let upscalerDescriptor = MTLFXSpatialScalerDescriptor()

@@ -107,7 +107,7 @@ class TriangleGeometry: Geometry {
         [indexBuffer, vertexNormalBuffer, vertexColorBuffer]
     }
 
-    func addCube(with faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
+    func addCube(withFaces faceMask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
         var cubeVertices = [
             vector_float3(-0.5, -0.5, -0.5),
             vector_float3( 0.5, -0.5, -0.5),
@@ -308,9 +308,9 @@ class Stage {
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
 
-    var cameraPosition = vector_float3(0.0, 0.0, -1.0)
-    var cameraTarget   = vector_float3(0.0, 0.0, 0.0)
-    var cameraUp       = vector_float3(0.0, 1.0, 0.0)
+    var viewerStandingAtLocation = vector_float3(0.0, 0.0, 1.0)
+    var viewerLookingAtLocation  = vector_float3(0.0, 0.0, 0.0)
+    var viewerHeadingUpDirection = vector_float3(0.0, 1.0, 0.0)
 
     init(device: MTLDevice) {
         self.device = device
@@ -319,17 +319,13 @@ class Stage {
     class func hoistCornellBox(lineUp: LineUp = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
-        // stage.cameraPosition = vector_float3(0.0, 1.0, 10.0)
-        stage.cameraTarget   = vector_float3(0.0, 0.0, 0.0)
-        stage.cameraUp       = vector_float3(0.0, 1.0, 0.0)
-
         let lightMesh = TriangleGeometry(device: device)
         stage.addGeometry(geometry: lightMesh)
 
         var transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(0.5, 1.98, 0.5)
 
         lightMesh.addCube(
-            with: FACE_MASK_POSITIVE_Y,
+            withFaces: FACE_MASK_POSITIVE_Y,
             color: vector_float3(1.0, 1.0, 1.0),
             transform: transform,
             inwardNormals: true)
@@ -340,17 +336,17 @@ class Stage {
         transform = matrix4x4_translation(0.0, 1.0, 0.0) * matrix4x4_scale(2.0, 2.0, 2.0)
 
         geometryMesh.addCube(
-            with: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
+            withFaces: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
             color: vector_float3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
-            with: FACE_MASK_NEGATIVE_X,
+            withFaces: FACE_MASK_NEGATIVE_X,
             color: vector_float3(0.63, 0.065, 0.05),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
-            with: FACE_MASK_POSITIVE_X,
+            withFaces: FACE_MASK_POSITIVE_X,
             color: vector_float3(0.14, 0.45, 0.091),
             transform: transform,
             inwardNormals: true)
@@ -358,7 +354,7 @@ class Stage {
         transform = matrix4x4_translation(-0.335, 0.6, -0.29) * matrix4x4_rotation(radians: 0.3, axis: vector_float3(0.0, 1.0, 0.0)) * matrix4x4_scale(0.6, 1.2, 0.6)
 
         geometryMesh.addCube(
-            with: FACE_MASK_ALL,
+            withFaces: FACE_MASK_ALL,
             color: vector_float3(0.725, 0.71, 0.68),
             transform: transform,
             inwardNormals: false)
@@ -407,16 +403,16 @@ class Stage {
 
         switch lineUp {
         case .oneByOne:
-            stage.cameraPosition = vector_float3(0.0, 0.0, 5.0)
+            viewerStandingAtLocation = vector_float3(0.0, 0.0, 5.0)
             hoistInstances(0.0, 0.0)
         case .twoByTwo:
-            stage.cameraPosition = vector_float3(0.0, 0.0, 8.5)
+            viewerStandingAtLocation = vector_float3(0.0, 0.0, 8.5)
             hoistInstances(-0.5, -0.5)
             hoistInstances( 0.5, -0.5)
             hoistInstances(-0.5,  0.5)
             hoistInstances( 0.5,  0.5)
         case .threeByThree:
-            stage.cameraPosition = vector_float3(0.0, 0.0, 12.0)
+            viewerStandingAtLocation = vector_float3(0.0, 0.0, 12.0)
             for y in -1...1 {
                 for x in -1...1 {
                     hoistInstances(Float(x), Float(y))

@@ -39,7 +39,7 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
 
         let stage = Stage.hoistCornellBox(lineUp: control.lineUp, device: uiView.device!)
         (uiView.delegate as! Renderer).reset(stage: stage)
-        
+
         uiView.isPaused = false
     }
 }

@@ -57,7 +57,7 @@ struct AreaLight {
 struct Uniforms {
     unsigned int width;
     unsigned int height;
-    unsigned int frameIndex;
+    unsigned int frameCount;
     unsigned int lightCount;
     Camera camera;
 };
@@ -360,8 +360,8 @@ kernel void raytracingKernel(
         unsigned int offset = randomTex.read(tid).x;
 
         // Add a random offset to the pixel coordinates for antialiasing.
-        float2 r = float2(halton(offset + uniforms.frameIndex, 0),
-                          halton(offset + uniforms.frameIndex, 1));
+        float2 r = float2(halton(offset + uniforms.frameCount, 0),
+                          halton(offset + uniforms.frameCount, 1));
 
         pixel += r;
 
@@ -506,12 +506,12 @@ kernel void raytracingKernel(
             }
 
             // Choose a random light source to sample.
-            float lightSample = halton(offset + uniforms.frameIndex, 2 + bounce * 5 + 0);
+            float lightSample = halton(offset + uniforms.frameCount, 2 + bounce * 5 + 0);
             unsigned int lightIndex = min((unsigned int)(lightSample * uniforms.lightCount), uniforms.lightCount - 1);
 
             // Choose a random point to sample on the light source.
-            float2 r = float2(halton(offset + uniforms.frameIndex, 2 + bounce * 5 + 1),
-                              halton(offset + uniforms.frameIndex, 2 + bounce * 5 + 2));
+            float2 r = float2(halton(offset + uniforms.frameCount, 2 + bounce * 5 + 1),
+                              halton(offset + uniforms.frameCount, 2 + bounce * 5 + 2));
 
             float3 worldSpaceLightDirection;
             float3 lightColor;
@@ -568,8 +568,8 @@ kernel void raytracingKernel(
             // BRDF and samples the rays with a cosine distribution over the hemisphere (importance
             // sampling). This requires that the kernel only multiply the colors together. This
             // sampling strategy also reduces the amount of noise in the output image.
-            r = float2(halton(offset + uniforms.frameIndex, 2 + bounce * 5 + 3),
-                       halton(offset + uniforms.frameIndex, 2 + bounce * 5 + 4));
+            r = float2(halton(offset + uniforms.frameCount, 2 + bounce * 5 + 3),
+                       halton(offset + uniforms.frameCount, 2 + bounce * 5 + 4));
 
             float3 worldSpaceSampleDirection = sampleCosineWeightedHemisphere(r);
             worldSpaceSampleDirection = alignHemisphereWithNormal(worldSpaceSampleDirection, worldSpaceSurfaceNormal);
@@ -579,12 +579,12 @@ kernel void raytracingKernel(
         }
 
         // Average this frame's sample with all of the previous frames.
-        if (uniforms.frameIndex > 0) {
+        if (uniforms.frameCount > 0) {
             float3 prevColor = prevTex.read(tid).xyz;
-            prevColor *= uniforms.frameIndex;
+            prevColor *= uniforms.frameCount;
 
             accumulatedColor += prevColor;
-            accumulatedColor /= (uniforms.frameIndex + 1);
+            accumulatedColor /= (uniforms.frameCount + 1);
         }
 
         dstTex.write(float4(accumulatedColor, 1.0f), tid);
