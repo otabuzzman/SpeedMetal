@@ -21,28 +21,10 @@ class SMView: MTKView {
     }
 }
 
-struct RendererControl {
-    enum Command {
-        case setLineUp
-        case setFramesToRender
-        case setUsePerPrimitiveData
-        case setUpscaleFactor
-    }
-
-    var command: Command
-
-    var lineUp: LineUp
-    var framesToRender: Int
-    var usePerPrimitiveData: Bool
-    var upscaleFactor: Float
-}
-
 struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
-    var control: RendererControl
     var content: Content
 
-    init(control: RendererControl, content: () -> Content) {
-        self.control = control
+    init(content: () -> Content) {
         self.content = content()
     }
 
@@ -52,18 +34,9 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
 
     func updateUIView(_ uiView: Content, context: Context) {
         uiView.isPaused = true
-
-        switch control.command {
-        case .setLineUp:
-            let stage = Stage.hoistCornellBox(lineUp: control.lineUp, device: uiView.device!)
-            (uiView.delegate as! Renderer).reset(stage: stage)
-        case .setFramesToRender:
-            (uiView.delegate as! Renderer).framesToRender = control.framesToRender
-        case .setUsePerPrimitiveData:
-            (uiView.delegate as! Renderer).usePerPrimitiveData = control.usePerPrimitiveData
-        case .setUpscaleFactor:
-            (uiView.delegate as! Renderer).upscaleFactor = control.upscaleFactor
-        }
+        
+        let stage = Stage.hoistCornellBox(device: uiView.device!)
+        (uiView.delegate as! Renderer).reset(stage: stage)
 
         uiView.isPaused = false
     }
@@ -71,70 +44,64 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
 
 @main
 struct SpeedMetal: App {
-    @StateObject var control: RendererControl = .upscaleFactor(1.0)
+    @StateObject var options = RendererOptions()
 
     var body: some Scene {
         WindowGroup {
-            SMViewAdapter(control: control) {
+            SMViewAdapter() {
                 SMView() { this in
-                    let stage = Stage.hoistCornellBox(lineUp: .oneByOne, device: this.device!)
+                    let stage = Stage.hoistCornellBox(device: this.device!)
 
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
-
-                    this.renderer = Renderer(device: this.device!, stage: stage, control: control)
+                    
+                    this.renderer = Renderer(device: this.device!, stage: stage, options: options)
                     this.delegate = this.renderer
                 }
             }
             HStack {
                 Button {
-                    control.command = .framesToRender
-                    control.framesToRender = 1
+                    options.framesToRender = 1
                 } label: {
                     Text("1x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
-                    control.command = .framesToRender
-                    control.framesToRender = 10
+                    options.framesToRender = 10
                 } label: {
                     Text("10x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
-                    control.command = .framesToRender
-                    control.framesToRender = 100
+                    options.framesToRender = 100
                 } label: {
                     Text("100x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
-                    control.command = .lineUp
-                    control.lineUp = .oneByOne
+                    options.lineUp = .oneByOne
                 } label: {
-                    Image(systemName: control.lineUp == .oneByOne ? "square.fill" : "square")
+                    Image(systemName: options.lineUp == .oneByOne ? "square.fill" : "square")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(control.lineUp == .oneByOne)
+                .disabled(options.lineUp == .oneByOne)
                 Button {
-                    control.command = .lineUp
-                    control.lineUp = .twoByTwo
+                    options.lineUp = .twoByTwo
                 } label: {
-                    Image(systemName: control.lineUp == .twoByTwo ? "square.grid.2x2.fill" : "square.grid.2x2")
+                    Image(systemName: options.lineUp == .twoByTwo ? "square.grid.2x2.fill" : "square.grid.2x2")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(control.lineUp == .twoByTwo)
+                .disabled(options.lineUp == .twoByTwo)
                 Button {
-                    control.command = .lineUp
-                    control.lineUp = .threeByThree
+                    options.lineUp = .threeByThree
                 } label: {
-                    Image(systemName: control.lineUp == .threeByThree ? "square.grid.3x3.fill" : "square.grid.3x3")
+                    Image(systemName: options.lineUp == .threeByThree ? "square.grid.3x3.fill" : "square.grid.3x3")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(control.lineUp == .threeByThree)
+                .disabled(options.lineUp == .threeByThree)
          }
          .padding(.bottom, 8)
         }

@@ -4,13 +4,19 @@ import MetalKit
 import MetalFX
 import simd
 
+class RendererOptions: ObservableObject {
+    @Published var lineUp = LineUp.threeByThree
+    var framesToRender: UInt32 = 1
+    var usePerPrimitiveData    = false
+    var upscaleFactor: Float   = 1.0
+
+    var view: MTKView?
+}
+
 class Renderer: NSObject {
     private var device:  MTLDevice
     private var stage:   Stage
-
-    var framesToRender: UInt32 = 1
-    var usePerPrimitiveData    = true
-    var upscaleFactor: Float   = 1.0
+    private var options: RendererOptions
 
     private var frameWidth: Int  = 0
     private var frameHeight: Int = 0
@@ -47,9 +53,10 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    init(device: MTLDevice, stage: Stage) {
+    init(device: MTLDevice, stage: Stage, options: RendererOptions) {
         self.device  = device
         self.stage   = stage
+        self.options = options
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -239,7 +246,7 @@ class Renderer: NSObject {
             intersectionFunctionTable = raycerPipeline.makeIntersectionFunctionTable(
                 descriptor: intersectionFunctionTableDescriptor)
 
-            if !usePerPrimitiveData {
+            if !options.usePerPrimitiveData {
                 intersectionFunctionTable.setBuffer(resourceBuffer, offset: 0, index: 0)
             }
 
@@ -313,9 +320,9 @@ class Renderer: NSObject {
         var resourcesStride = self.resourcesStride
         var function: MTLFunction
 
-        constants.setConstantValue(&resourcesStride,           type: .uint, index: 0)
-        constants.setConstantValue(&useIntersectionFunctions,  type: .bool, index: 1)
-        constants.setConstantValue(&usePerPrimitiveData, type: .bool, index: 2)
+        constants.setConstantValue(&resourcesStride,             type: .uint, index: 0)
+        constants.setConstantValue(&useIntersectionFunctions,    type: .bool, index: 1)
+        constants.setConstantValue(&options.usePerPrimitiveData, type: .bool, index: 2)
 
         do {
             function = try library.makeFunction(name: name, constantValues: constants)
@@ -371,6 +378,7 @@ class Renderer: NSObject {
     }
 
     private func createSpatialUpscaler() -> Void {
+        let upscaleFactor = options.upscaleFactor
         let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
         upscalerDescriptor.inputWidth   = frameWidth
         upscalerDescriptor.inputHeight  = frameHeight
@@ -386,6 +394,9 @@ class Renderer: NSObject {
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
+        options.view = view
+        
+        let upscaleFactor = options.upscaleFactor
         frameWidth  = Int(Float(size.width) / upscaleFactor)
         frameHeight = Int(Float(size.height) / upscaleFactor)
 
@@ -402,7 +413,7 @@ extension Renderer: MTKViewDelegate {
             device.makeTexture(descriptor: textureDescriptor)!
         ]
 
-        if upscaleFactor > 1.0 {
+        if options.upscaleFactor > 1.0 {
             textureDescriptor.width  = Int(Float(frameWidth) * upscaleFactor)
             textureDescriptor.height = Int(Float(frameHeight) * upscaleFactor)
             upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
@@ -431,7 +442,7 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) -> Void {
-        if frameCount % framesToRender == 0 {
+        if frameCount % options.framesToRender == 0 {
             view.isPaused = true
         }
 
@@ -452,7 +463,7 @@ extension Renderer: MTKViewDelegate {
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
 
         computeEncoder.setBuffer(uniformsBuffer, offset: uniformsBufferOffset, index: 0)
-        if !usePerPrimitiveData {
+        if !options.usePerPrimitiveData {
             computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
         }
         computeEncoder.setBuffer(instanceBuffer, offset: 0, index: 2)
@@ -482,7 +493,7 @@ extension Renderer: MTKViewDelegate {
 
         accumulationTargets.swapAt(0, 1)
 
-        if upscaleFactor > 1.0 {
+        if options.upscaleFactor > 1.0 {
             spatialUpscaler.colorTexture = accumulationTargets[0]
             spatialUpscaler.outputTexture = upscaledTarget
             spatialUpscaler.encode(commandBuffer: commandBuffer)
@@ -496,7 +507,7 @@ extension Renderer: MTKViewDelegate {
 
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
             renderEncoder.setRenderPipelineState(shaderPipeline)
-            if upscaleFactor > 1.0 {
+            if options.upscaleFactor > 1.0 {
                 renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
             } else {
                 renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
