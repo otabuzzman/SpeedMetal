@@ -9,8 +9,6 @@ class RendererOptions: ObservableObject {
     var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = false
     var upscaleFactor: Float   = 1.0
-
-    var view: MTKView?
 }
 
 class Renderer: NSObject {
@@ -20,7 +18,7 @@ class Renderer: NSObject {
 
     private var frameWidth: Int  = 0
     private var frameHeight: Int = 0
-    private var frameCount: UInt32 = 1
+    private var frameCount: UInt32 = 0
     
     private let maxFramesInFlight = 3
     private var maxFramesSignal: DispatchSemaphore!
@@ -70,8 +68,7 @@ class Renderer: NSObject {
     func reset(stage: Stage) -> Void {
         self.stage = stage
 
-        frameCount      = 1
-        resourcesStride = 0
+        frameCount      = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -130,8 +127,12 @@ class Renderer: NSObject {
             length: uniformsBufferSize,
             options: [.storageModeShared])
 
+        uniformsBufferOffset = 0
+        uniformsBufferIndex  = 0
+
         stage.uploadToBuffers()
 
+		resourcesStride = 0
         for geometry in stage.geometries {
             let geometry = geometry as! Geometry
 
@@ -179,10 +180,10 @@ class Renderer: NSObject {
             let geometryDescriptor = geometry.descriptor()
             geometryDescriptor.intersectionFunctionTableOffset = i
 
-            let accelDescriptor = MTLPrimitiveAccelerationStructureDescriptor()
-            accelDescriptor.geometryDescriptors = [geometryDescriptor]
+            let descriptor = MTLPrimitiveAccelerationStructureDescriptor()
+            descriptor.geometryDescriptors = [geometryDescriptor]
 
-            let accelerationStructure = makeAccelerationStructure(descriptor: accelDescriptor)
+            let accelerationStructure = makeAccelerationStructure(descriptor: descriptor)
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
@@ -204,12 +205,12 @@ class Renderer: NSObject {
 
         }
 
-        let accelDescriptor = MTLInstanceAccelerationStructureDescriptor()
-        accelDescriptor.instancedAccelerationStructures = primitiveAccelerationStructures as? [any MTLAccelerationStructure]
-        accelDescriptor.instanceCount                   = stage.instances.count
-        accelDescriptor.instanceDescriptorBuffer        = instanceBuffer
+        let descriptor = MTLInstanceAccelerationStructureDescriptor()
+        descriptor.instancedAccelerationStructures = primitiveAccelerationStructures as? [any MTLAccelerationStructure]
+        descriptor.instanceCount                   = stage.instances.count
+        descriptor.instanceDescriptorBuffer        = instanceBuffer
 
-        instanceAccelerationStructure = makeAccelerationStructure(descriptor: accelDescriptor)
+        instanceAccelerationStructure = makeAccelerationStructure(descriptor: descriptor)
     }
 
     private func createRaycerAndShaderPipelines() -> Void {
@@ -394,8 +395,6 @@ class Renderer: NSObject {
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        options.view = view
-        
         let upscaleFactor = options.upscaleFactor
         frameWidth  = Int(Float(size.width) / upscaleFactor)
         frameHeight = Int(Float(size.height) / upscaleFactor)
@@ -438,12 +437,12 @@ extension Renderer: MTKViewDelegate {
             withBytes: &randomValues,
             bytesPerRow: MemoryLayout<UInt32>.size * frameWidth)
 
-        frameCount = 1
+        frameCount = 0
     }
 
     func draw(in view: MTKView) -> Void {
-        if frameCount % options.framesToRender == 0 {
-            view.isPaused = true
+        if frameCount == options.framesToRender {
+            return
         }
 
         maxFramesSignal.wait()

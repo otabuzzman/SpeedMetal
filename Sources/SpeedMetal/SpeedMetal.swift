@@ -52,54 +52,56 @@ struct SpeedMetal: App {
         WindowGroup {
             SMViewAdapter(options.lineUp) {
                 SMView() { this in
-                    let stage = Stage.hoistCornellBox(device: this.device!)
-
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
                     
+                    let stage = Stage.hoistCornellBox(device: this.device!)
                     this.renderer = Renderer(device: this.device!, stage: stage, options: options)
                     this.delegate = this.renderer
                 }
             }
             HStack {
                 Button {
-                    options.framesToRender = 1
+                    options.framesToRender += 1
                 } label: {
                     Text("1x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
-                    options.framesToRender = 10
+                    options.framesToRender += 10
                 } label: {
                     Text("10x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
-                    options.framesToRender = 100
+                    options.framesToRender += 100
                 } label: {
                     Text("100x")
                         .frame(width: 42, height: 42)
                 }
                 Button {
+					options.framesToRender = 1
                     options.lineUp = .oneByOne
                 } label: {
-                    Image(systemName: options.lineUp == .oneByOne ? "square.fill" : "square")
+                    Image(systemName: "square")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
                 .disabled(options.lineUp == .oneByOne)
                 Button {
+					options.framesToRender = 1
                     options.lineUp = .twoByTwo
                 } label: {
-                    Image(systemName: options.lineUp == .twoByTwo ? "square.grid.2x2.fill" : "square.grid.2x2")
+                    Image(systemName: "square.grid.2x2")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
                 .disabled(options.lineUp == .twoByTwo)
                 Button {
+					options.framesToRender = 1
                     options.lineUp = .threeByThree
                 } label: {
-                    Image(systemName: options.lineUp == .threeByThree ? "square.grid.3x3.fill" : "square.grid.3x3")
+                    Image(systemName: "square.grid.3x3")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
