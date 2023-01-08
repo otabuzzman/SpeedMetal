@@ -22,9 +22,11 @@ class SMView: MTKView {
 }
 
 struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
+    var lineUp: LineUp
     var content: Content
 
-    init(content: () -> Content) {
+    init(_ lineUp: LineUp, content: () -> Content) {
+        self.lineUp = lineUp
         self.content = content()
     }
 
@@ -35,7 +37,7 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
     func updateUIView(_ uiView: Content, context: Context) {
         uiView.isPaused = true
         
-        let stage = Stage.hoistCornellBox(device: uiView.device!)
+        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: uiView.device!)
         (uiView.delegate as! Renderer).reset(stage: stage)
 
         uiView.isPaused = false
@@ -48,7 +50,7 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
-            SMViewAdapter() {
+            SMViewAdapter(options.lineUp) {
                 SMView() { this in
                     let stage = Stage.hoistCornellBox(device: this.device!)
 
