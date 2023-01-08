@@ -35,12 +35,8 @@ struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
     }
 
     func updateUIView(_ uiView: Content, context: Context) {
-        uiView.isPaused = true
-        
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: uiView.device!)
         (uiView.delegate as! Renderer).reset(stage: stage)
-
-        uiView.isPaused = false
     }
 }
 
@@ -65,22 +61,22 @@ struct SpeedMetal: App {
                     options.framesToRender += 1
                 } label: {
                     Text("1x")
-                        .frame(width: 42, height: 42)
+                        .font(.title2)
                 }
                 Button {
                     options.framesToRender += 10
                 } label: {
                     Text("10x")
-                        .frame(width: 42, height: 42)
+                        .font(.title2)
                 }
                 Button {
                     options.framesToRender += 100
                 } label: {
                     Text("100x")
-                        .frame(width: 42, height: 42)
+                        .font(.title2)
                 }
                 Button {
-					options.framesToRender = 1
+                    options.framesToRender = 1
                     options.lineUp = .oneByOne
                 } label: {
                     Image(systemName: "square")
@@ -89,7 +85,7 @@ struct SpeedMetal: App {
                 }
                 .disabled(options.lineUp == .oneByOne)
                 Button {
-					options.framesToRender = 1
+                    options.framesToRender = 1
                     options.lineUp = .twoByTwo
                 } label: {
                     Image(systemName: "square.grid.2x2")
@@ -98,7 +94,7 @@ struct SpeedMetal: App {
                 }
                 .disabled(options.lineUp == .twoByTwo)
                 Button {
-					options.framesToRender = 1
+                    options.framesToRender = 1
                     options.lineUp = .threeByThree
                 } label: {
                     Image(systemName: "square.grid.3x3")
@@ -106,8 +102,8 @@ struct SpeedMetal: App {
                         .frame(width: 42, height: 42)
                 }
                 .disabled(options.lineUp == .threeByThree)
-         }
-         .padding(.bottom, 8)
+            }
+            .padding(.bottom, 8)
         }
     }
 }
