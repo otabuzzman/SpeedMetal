@@ -379,16 +379,16 @@ class Renderer: NSObject {
 
     private func createSpatialUpscaler() -> Void {
         let upscaleFactor = options.upscaleFactor
-        let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
-        upscalerDescriptor.inputWidth   = frameWidth
-        upscalerDescriptor.inputHeight  = frameHeight
-        upscalerDescriptor.outputWidth  = Int(Float(frameWidth) * upscaleFactor)
-        upscalerDescriptor.outputHeight = Int(Float(frameHeight) * upscaleFactor)
-        upscalerDescriptor.colorTextureFormat  = .rgba32Float
-        upscalerDescriptor.outputTextureFormat = .rgba32Float
-        upscalerDescriptor.colorProcessingMode = .perceptual
+        let descriptor = MTLFXSpatialScalerDescriptor()
+        descriptor.inputWidth   = frameWidth
+        descriptor.inputHeight  = frameHeight
+        descriptor.outputWidth  = Int(Float(frameWidth) * upscaleFactor)
+        descriptor.outputHeight = Int(Float(frameHeight) * upscaleFactor)
+        descriptor.colorTextureFormat  = .rgba32Float
+        descriptor.outputTextureFormat = .rgba32Float
+        descriptor.colorProcessingMode = .perceptual
 
-        spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
+        spatialUpscaler = descriptor.makeSpatialScaler(device: device)
     }
 }
 
@@ -400,23 +400,23 @@ extension Renderer: MTKViewDelegate {
         frameWidth  = Int(Float(size.width) / upscaleFactor)
         frameHeight = Int(Float(size.height) / upscaleFactor)
 
-        let textureDescriptor         = MTLTextureDescriptor()
-        textureDescriptor.pixelFormat = .rgba32Float
-        textureDescriptor.textureType = .type2D
-        textureDescriptor.width       = frameWidth
-        textureDescriptor.height      = frameHeight
-        textureDescriptor.storageMode = .shared
-        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
+        let descriptor         = MTLTextureDescriptor()
+        descriptor.pixelFormat = .rgba32Float
+        descriptor.textureType = .type2D
+        descriptor.width       = frameWidth
+        descriptor.height      = frameHeight
+        descriptor.storageMode = .shared
+        descriptor.usage       = [.shaderRead, .shaderWrite]
 
         accumulationTargets = [
-            device.makeTexture(descriptor: textureDescriptor)!,
-            device.makeTexture(descriptor: textureDescriptor)!
+            device.makeTexture(descriptor: descriptor)!,
+            device.makeTexture(descriptor: descriptor)!
         ]
 
         if options.upscaleFactor > 1.0 {
-            textureDescriptor.width  = Int(Float(frameWidth) * upscaleFactor)
-            textureDescriptor.height = Int(Float(frameHeight) * upscaleFactor)
-            upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
+            descriptor.width  = Int(Float(frameWidth) * upscaleFactor)
+            descriptor.height = Int(Float(frameHeight) * upscaleFactor)
+            upscaledTarget = device.makeTexture(descriptor: descriptor)!
 
             createSpatialUpscaler()
         }
@@ -427,11 +427,11 @@ extension Renderer: MTKViewDelegate {
             randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
         }
 
-        textureDescriptor.pixelFormat = .r32Uint
-        textureDescriptor.storageMode = .shared
-        textureDescriptor.usage       = .shaderRead
+        descriptor.pixelFormat = .r32Uint
+        descriptor.storageMode = .shared
+        descriptor.usage       = .shaderRead
 
-        randomTexture = device.makeTexture(descriptor: textureDescriptor)!
+        randomTexture = device.makeTexture(descriptor: descriptor)!
         randomTexture.replace(
             region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
             mipmapLevel: 0,
