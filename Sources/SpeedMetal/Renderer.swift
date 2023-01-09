@@ -19,7 +19,7 @@ class Renderer: NSObject {
     private var frameWidth: Int  = 0
     private var frameHeight: Int = 0
     private var frameCount: UInt32 = 0
-    
+
     private let maxFramesInFlight = 3
     private var maxFramesSignal: DispatchSemaphore!
 
@@ -31,7 +31,7 @@ class Renderer: NSObject {
     private var uniformsBufferIndex  = 0
     private let alignedUniformsSize  = (MemoryLayout<Uniforms>.stride + 255) & ~255
 
-    private var resourceBuffer: MTLBuffer!
+    private var resourceBuffer:  MTLBuffer!
     private var resourcesStride: UInt32  = 0
 
     private var instanceBuffer: MTLBuffer!
@@ -47,7 +47,7 @@ class Renderer: NSObject {
 
     private var intersectionFunctionTable: MTLIntersectionFunctionTable!
     private var useIntersectionFunctions = false
-    
+
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
@@ -132,7 +132,7 @@ class Renderer: NSObject {
 
         stage.uploadToBuffers()
 
-		resourcesStride = 0
+        resourcesStride = 0
         for geometry in stage.geometries {
             let geometry = geometry as! Geometry
 

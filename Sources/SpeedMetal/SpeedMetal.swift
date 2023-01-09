@@ -50,7 +50,7 @@ struct SpeedMetal: App {
                 SMView() { this in
                     this.backgroundColor  = .black
                     this.colorPixelFormat = .rgba16Float
-                    
+
                     let stage = Stage.hoistCornellBox(device: this.device!)
                     this.renderer = Renderer(device: this.device!, stage: stage, options: options)
                     this.delegate = this.renderer
