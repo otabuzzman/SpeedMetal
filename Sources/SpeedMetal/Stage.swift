@@ -299,6 +299,10 @@ enum LineUp {
 }
 
 class Stage {
+    var viewerStandingAtLocation = vector_float3(0.0, 0.0, 1.0)
+    var viewerLookingAtLocation  = vector_float3(0.0, 0.0, 0.0)
+    var viewerHeadingUpDirection = vector_float3(0.0, 1.0, 0.0)
+
     private(set) var device: MTLDevice
 
     private(set) var geometries: NSMutableArray = []
@@ -307,10 +311,6 @@ class Stage {
     private var lights = [AreaLight]()
     private(set) var lightBuffer: MTLBuffer!
     var lightCount: UInt32 { UInt32(lights.count) }
-
-    var viewerStandingAtLocation = vector_float3(0.0, 0.0, 1.0)
-    var viewerLookingAtLocation  = vector_float3(0.0, 0.0, 0.0)
-    var viewerHeadingUpDirection = vector_float3(0.0, 1.0, 0.0)
 
     init(device: MTLDevice) {
         self.device = device

@@ -80,12 +80,11 @@ struct Triangle {
 #include <simd/simd.h>
 
 using namespace metal;
-
 using namespace raytracing;
 
-constant unsigned int resourcesStride   [[function_constant(0)]];
-constant bool useIntersectionFunctions  [[function_constant(1)]];
-constant bool usePerPrimitiveData       [[function_constant(2)]];
+constant unsigned int resourcesStride  [[function_constant(0)]];
+constant bool useIntersectionFunctions [[function_constant(1)]];
+constant bool usePerPrimitiveData      [[function_constant(2)]];
 constant bool useResourcesBuffer = !usePerPrimitiveData;
 
 constant unsigned int primes[] = {
@@ -123,11 +122,7 @@ float halton(unsigned int i, unsigned int d) {
 // Interpolates the vertex attribute of an arbitrary type across the surface of a triangle
 // given the barycentric coordinates and triangle index in an intersection structure.
 template<typename T, typename IndexType>
-inline T interpolateVertexAttribute(device T *attributes,
-                                    IndexType i0,
-                                    IndexType i1,
-                                    IndexType i2,
-                                    float2 uv) {
+inline T interpolateVertexAttribute(device T *attributes, IndexType i0, IndexType i1, IndexType i2, float2 uv) {
     // Look up value for each vertex.
     const T T0 = attributes[i0];
     const T T1 = attributes[i1];
@@ -170,13 +165,13 @@ inline float3 sampleCosineWeightedHemisphere(float2 u) {
 // between the intersection point and the sample point on the light source, as well
 // as the distance between these two points.
 
-inline void sampleAreaLight(constant AreaLight & light,
-                            float2 u,
-                            float3 position,
-                            thread float3 & lightDirection,
-                            thread float3 & lightColor,
-                            thread float & lightDistance)
-{
+inline void sampleAreaLight(
+        constant AreaLight & light,
+        float2 u,
+        float3 position,
+        thread float3 & lightDirection,
+        thread float3 & lightColor,
+        thread float & lightDistance) {
     // Map to -1..1
     u = u * 2.0f - 1.0f;
 
@@ -263,22 +258,21 @@ struct SphereResources {
  Metal provides other built-in arguments, but this sample doesn't use them.
  */
 [[intersection(bounding_box, triangle_data, instancing)]]
-BoundingBoxIntersection sphereIntersectionFunction(// Ray parameters passed to the ray intersector below
-                                                   float3 origin                        [[origin]],
-                                                   float3 direction                     [[direction]],
-                                                   float minDistance                    [[min_distance]],
-                                                   float maxDistance                    [[max_distance]],
-                                                   // Information about the primitive.
-                                                   unsigned int primitiveIndex          [[primitive_id]],
-                                                   unsigned int geometryIndex           [[geometry_intersection_function_table_offset]],
-                                                   // Custom resources bound to the intersection function table.
-                                                   device void *resources               [[buffer(0), function_constant(useResourcesBuffer)]]
+BoundingBoxIntersection sphereIntersectionFunction( // Ray parameters passed to the ray intersector below
+        float3 origin                        [[origin]],
+        float3 direction                     [[direction]],
+        float minDistance                    [[min_distance]],
+        float maxDistance                    [[max_distance]],
+        // Information about the primitive.
+        unsigned int primitiveIndex          [[primitive_id]],
+        unsigned int geometryIndex           [[geometry_intersection_function_table_offset]],
+        // Custom resources bound to the intersection function table.
+        device void *resources               [[buffer(0), function_constant(useResourcesBuffer)]]
 // SpeedMetal app is supposed for Metal 3 only
 // #if SUPPORTS_METAL_3
-                                                   ,const device void* perPrimitiveData [[primitive_data]]
+        ,const device void* perPrimitiveData [[primitive_data]]
 // #endif
-                                                   )
-{
+) {
     Sphere sphere;
 // SpeedMetal app is supposed for Metal 3 only
 // #if SUPPORTS_METAL_3
@@ -334,18 +328,16 @@ float3 transformDirection(float3 p, float4x4 transform) {
 
 // Main ray tracing kernel.
 kernel void raycerKernel(
-     uint2                                                  tid                       [[thread_position_in_grid]],
-     constant Uniforms &                                    uniforms                  [[buffer(0)]],
-     texture2d<unsigned int>                                randomTex                 [[texture(0)]],
-     texture2d<float>                                       prevTex                   [[texture(1)]],
-     texture2d<float, access::write>                        dstTex                    [[texture(2)]],
-     device void                                           *resources                 [[buffer(1), function_constant(useResourcesBuffer)]],
-     constant MTLAccelerationStructureInstanceDescriptor   *instances                 [[buffer(2)]],
-     constant AreaLight                                    *areaLights                [[buffer(3)]],
-     instance_acceleration_structure                        accelerationStructure     [[buffer(4)]],
-     intersection_function_table<triangle_data, instancing> intersectionFunctionTable [[buffer(5)]]
-)
-{
+        uint2                                                  tid                       [[thread_position_in_grid]],
+        constant Uniforms &                                    uniforms                  [[buffer(0)]],
+        texture2d<unsigned int>                                randomTex                 [[texture(0)]],
+        texture2d<float>                                       prevTex                   [[texture(1)]],
+        texture2d<float, access::write>                        dstTex                    [[texture(2)]],
+        device void                                           *resources                 [[buffer(1), function_constant(useResourcesBuffer)]],
+        constant MTLAccelerationStructureInstanceDescriptor   *instances                 [[buffer(2)]],
+        constant AreaLight                                    *areaLights                [[buffer(3)]],
+        instance_acceleration_structure                        accelerationStructure     [[buffer(4)]],
+        intersection_function_table<triangle_data, instancing> intersectionFunctionTable [[buffer(5)]]) {
     // The sample aligns the thread count to the threadgroup size, which means the thread count
     // may be different than the bounds of the texture. Test to make sure this thread
     // is referencing a pixel within the bounds of the texture.
@@ -619,9 +611,7 @@ vertex CopyVertexOut copyVertex(unsigned short vid [[vertex_id]]) {
 }
 
 // Simple fragment shader that copies a texture and applies a simple tonemapping function.
-fragment float4 copyFragment(CopyVertexOut in [[stage_in]],
-                             texture2d<float> tex)
-{
+fragment float4 copyFragment(CopyVertexOut in [[stage_in]], texture2d<float> tex) {
     constexpr sampler sam(min_filter::nearest, mag_filter::nearest, mip_filter::none);
 
     float3 color = tex.sample(sam, in.uv).xyz;

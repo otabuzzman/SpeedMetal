@@ -36,8 +36,8 @@ class Renderer: NSObject {
 
     private var instanceBuffer: MTLBuffer!
 
-    private var accumulationTargets: [MTLTexture]!
-    private var randomTexture:       MTLTexture!
+    private var raycerTargets: [MTLTexture]!
+    private var randomTexture: MTLTexture!
 
     private var instanceAccelerationStructure:   MTLAccelerationStructure!
     private var primitiveAccelerationStructures: NSMutableArray!
@@ -75,13 +75,13 @@ class Renderer: NSObject {
         createRaycerAndShaderPipelines()
 
         guard
-            let accumulationTargets = accumulationTargets
+            let raycerTargets = raycerTargets
         else { return }
 
         let zeroes = Array<vector_float4>(repeating: .zero, count: frameWidth * frameHeight)
 
-        for accumulationTarget in accumulationTargets {
-            accumulationTarget.replace(
+        for raycerTarget in raycerTargets {
+            raycerTarget.replace(
                 region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
                 mipmapLevel: 0,
                 withBytes: zeroes,
@@ -160,12 +160,12 @@ class Renderer: NSObject {
                     resourceHandles.storeBytes(
                         of: (resource as! MTLBuffer).gpuAddress,
                         toByteOffset: resourceIndex * MemoryLayout<UInt64>.size, as: UInt64.self)
-                } else {
-                    if resource.conforms(to: MTLTexture.self) {
-                        resourceHandles.storeBytes(
-                            of: (resource as! MTLTexture).gpuResourceID,
-                            toByteOffset: resourceIndex * MemoryLayout<MTLResourceID>.size, as: MTLResourceID.self)
-                    }
+                    continue
+                }
+                if resource.conforms(to: MTLTexture.self) {
+                    resourceHandles.storeBytes(
+                        of: (resource as! MTLTexture).gpuResourceID,
+                        toByteOffset: resourceIndex * MemoryLayout<MTLResourceID>.size, as: MTLResourceID.self)
                 }
             }
         }
@@ -407,7 +407,7 @@ extension Renderer: MTKViewDelegate {
         descriptor.storageMode = .shared
         descriptor.usage       = [.shaderRead, .shaderWrite]
 
-        accumulationTargets = [
+        raycerTargets = [
             device.makeTexture(descriptor: descriptor)!,
             device.makeTexture(descriptor: descriptor)!
         ]
@@ -472,8 +472,8 @@ extension Renderer: MTKViewDelegate {
         computeEncoder.setIntersectionFunctionTable(intersectionFunctionTable, bufferIndex: 5)
 
         computeEncoder.setTexture(randomTexture, index: 0)
-        computeEncoder.setTexture(accumulationTargets[0], index: 1)
-        computeEncoder.setTexture(accumulationTargets[1], index: 2)
+        computeEncoder.setTexture(raycerTargets[0], index: 1)
+        computeEncoder.setTexture(raycerTargets[1], index: 2)
 
         for geometry in stage.geometries {
             for resource in (geometry as! Geometry).resources() {
@@ -490,10 +490,10 @@ extension Renderer: MTKViewDelegate {
         computeEncoder.dispatchThreadgroups(threadgroups, threadsPerThreadgroup: threadsPerThreadgroup)
         computeEncoder.endEncoding()
 
-        accumulationTargets.swapAt(0, 1)
+        raycerTargets.swapAt(0, 1)
 
         if options.upscaleFactor > 1.0 {
-            spatialUpscaler.colorTexture = accumulationTargets[0]
+            spatialUpscaler.colorTexture = raycerTargets[0]
             spatialUpscaler.outputTexture = upscaledTarget
             spatialUpscaler.encode(commandBuffer: commandBuffer)
         }
@@ -509,7 +509,7 @@ extension Renderer: MTKViewDelegate {
             if options.upscaleFactor > 1.0 {
                 renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
             } else {
-                renderEncoder.setFragmentTexture(accumulationTargets[0], index: 0)
+                renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
             }
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
 
