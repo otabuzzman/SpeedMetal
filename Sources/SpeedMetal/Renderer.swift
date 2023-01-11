@@ -4,24 +4,19 @@ import MetalKit
 import MetalFX
 import simd
 
-class RendererOptions: ObservableObject {
-    @Published var lineUp = LineUp.threeByThree
-    var framesToRender: UInt32 = 1
-}
-
 class Renderer: NSObject {
-    private var device:  MTLDevice
-    private var stage:   Stage
-    private var options: RendererOptions
+    private(set) var device: MTLDevice
 
     // options
+    var stage: Stage!
+    var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = false
-    var upscaleFactor: Float   = 8.0
+    var upscaleFactor: Float   = 1.0
 
     private var frameWidth: Int    = 0
     private var frameHeight: Int   = 0
-    private var raycerWidth: Int  = 0
-    private var raycerHeight: Int = 0
+    private var raycerWidth: Int   = 0
+    private var raycerHeight: Int  = 0
     private var frameCount: UInt32 = 0
 
     private let maxFramesInFlight = 3
@@ -55,10 +50,9 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    init(device: MTLDevice, stage: Stage, options: RendererOptions) {
-        self.device  = device
-        self.stage   = stage
-        self.options = options
+    init(device: MTLDevice, stage: Stage) {
+        self.device = device
+        self.stage  = stage
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -71,21 +65,19 @@ class Renderer: NSObject {
         createRaycerAndShaderPipelines()
     }
 
-    func reset(stage: Stage) -> Void {
-        self.stage = stage
-
+    func reset() -> Void {
         frameCount = 0
 
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
 
-		// supposed for function beginning but crashes 
         guard // must not exec reset() before mtkView()
             let _ = raycerTargets
         else { return }
-
-        createTexturesAndUpscaler()
+        
+        // supposed for function beginning but crashes 
+        // createTexturesAndUpscaler()
         /*
         let zeroes = Array<vector_float4>(repeating: .zero, count: raycerWidth * raycerHeight)
 
@@ -140,7 +132,7 @@ class Renderer: NSObject {
         uniformsBufferOffset = 0
         uniformsBufferIndex  = 0
 
-        stage.uploadToBuffers()
+        stage.createBuffers()
 
         resourcesStride = 0
         for geometry in stage.geometries {
@@ -454,7 +446,7 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) -> Void {
-        if frameCount == options.framesToRender {
+        if frameCount == framesToRender {
             return
         }
 

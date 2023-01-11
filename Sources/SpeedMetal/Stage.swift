@@ -29,7 +29,7 @@ protocol Geometry {
     init(device: MTLDevice)
 
     func clear()           -> Void
-    func uploadToBuffers() -> Void
+    func createBuffers() -> Void
     func descriptor()      -> MTLAccelerationStructureGeometryDescriptor
     func resources()       -> [MTLResource]
 }
@@ -62,7 +62,7 @@ class TriangleGeometry: Geometry {
         triangles.removeAll()
     }
 
-    func uploadToBuffers() -> Void {
+    func createBuffers() -> Void {
         indexBuffer = device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
@@ -224,7 +224,7 @@ class SphereGeometry: Geometry {
         spheres.removeAll()
     }
 
-    func uploadToBuffers() -> Void {
+    func createBuffers() -> Void {
         var boundingBoxes = [BoundingBox]()
 
         for sphere in spheres {
@@ -427,9 +427,9 @@ class Stage {
         lights.removeAll()
     }
 
-    func uploadToBuffers() -> Void {
+    func createBuffers() -> Void {
         for geometry in geometries {
-            (geometry as! Geometry).uploadToBuffers()
+            (geometry as! Geometry).createBuffers()
         }
 
         lightBuffer = device.makeBuffer(

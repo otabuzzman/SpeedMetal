@@ -1,107 +1,96 @@
 import MetalKit
 import SwiftUI
 
-class SMView: MTKView {
-    var renderer: Renderer!
-
-    init(configure: (SMView) -> ()) {
+struct SMView: UIViewRepresentable {
+    var lineUp: LineUp
+    var framesToRender: UInt32
+    
+    init(_ lineUp: LineUp, _ framesToRender: UInt32) {print("init")
+        self.lineUp         = lineUp
+        self.framesToRender = framesToRender
+    }
+    
+    func makeCoordinator() -> Renderer {
         guard
             let device = MTLCreateSystemDefaultDevice(),
             device.supportsFamily(.metal3)
         else {
             fatalError("no Metal 3 capable GPU available")
         }
-        super.init(frame: .zero, device: device)
-
-        configure(self)
+        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
+        return Renderer(device: device, stage: stage)
+    }
+    
+    func makeUIView(context: Context) -> MTKView {
+        let view = MTKView(frame: .zero, device: context.coordinator.device)
+        view.backgroundColor  = .black
+        view.colorPixelFormat = .rgba16Float
+        view.delegate         = context.coordinator
+        return view
     }
 
-    required init(coder: NSCoder) {
-        super.init(coder: coder)
-    }
-}
-
-struct SMViewAdapter<Content>: UIViewRepresentable where Content: MTKView {
-    var lineUp: LineUp
-    var content: Content
-
-    init(_ lineUp: LineUp, content: () -> Content) {
-        self.lineUp = lineUp
-        self.content = content()
-    }
-
-    func makeUIView(context: Context) -> Content {
-        content
-    }
-
-    func updateUIView(_ uiView: Content, context: Context) {
-        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: uiView.device!)
-        (uiView.delegate as! Renderer).reset(stage: stage)
+    func updateUIView(_ view: MTKView, context: Context) {
+        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+//        context.coordinator.stage = stage
+//        context.coordinator.reset()
+        context.coordinator.framesToRender = framesToRender
     }
 }
 
 @main
 struct SpeedMetal: App {
-    @StateObject var options = RendererOptions()
+    @State var lineUp = LineUp.threeByThree
+    @State var framesToRender: UInt32 = 1
 
     var body: some Scene {
         WindowGroup {
-            SMViewAdapter(options.lineUp) {
-                SMView() { this in
-                    this.backgroundColor  = .black
-                    this.colorPixelFormat = .rgba16Float
-
-                    let stage = Stage.hoistCornellBox(device: this.device!)
-                    this.renderer = Renderer(device: this.device!, stage: stage, options: options)
-                    this.delegate = this.renderer
-                }
-            }
+            SMView(lineUp, framesToRender)
             HStack {
                 Button {
-                    options.framesToRender += 1
+                    framesToRender += 1
                 } label: {
                     Text("1x")
                         .font(.title2)
                 }
                 Button {
-                    options.framesToRender += 10
+                    framesToRender += 10
                 } label: {
                     Text("10x")
                         .font(.title2)
                 }
                 Button {
-                    options.framesToRender += 100
+                    framesToRender += 100
                 } label: {
                     Text("100x")
                         .font(.title2)
                 }
                 Button {
-                    options.framesToRender = 1
-                    options.lineUp = .oneByOne
+                    framesToRender = 1
+                    lineUp = .oneByOne
                 } label: {
                     Image(systemName: "square")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(options.lineUp == .oneByOne)
+                .disabled(lineUp == .oneByOne)
                 Button {
-                    options.framesToRender = 1
-                    options.lineUp = .twoByTwo
+                    framesToRender = 1
+                    lineUp = .twoByTwo
                 } label: {
                     Image(systemName: "square.grid.2x2")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(options.lineUp == .twoByTwo)
+                .disabled(lineUp == .twoByTwo)
                 Button {
-                    options.framesToRender = 1
-                    options.lineUp = .threeByThree
+                    framesToRender = 1
+                    lineUp = .threeByThree
                 } label: {
                     Image(systemName: "square.grid.3x3")
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(options.lineUp == .threeByThree)
+                .disabled(lineUp == .threeByThree)
             }
             .padding(.bottom, 8)
         }
