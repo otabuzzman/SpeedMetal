@@ -5,7 +5,7 @@ struct SMView: UIViewRepresentable {
     var lineUp: LineUp
     var framesToRender: UInt32
     
-    init(_ lineUp: LineUp, _ framesToRender: UInt32) {print("init")
+    init(_ lineUp: LineUp, _ framesToRender: UInt32) {
         self.lineUp         = lineUp
         self.framesToRender = framesToRender
     }
@@ -18,7 +18,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(device: device, stage: stage)
+        return Renderer(stage: stage, device: device)
     }
     
     func makeUIView(context: Context) -> MTKView {
@@ -32,7 +32,6 @@ struct SMView: UIViewRepresentable {
     func updateUIView(_ view: MTKView, context: Context) {
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
 //        context.coordinator.stage = stage
-//        context.coordinator.reset()
         context.coordinator.framesToRender = framesToRender
     }
 }

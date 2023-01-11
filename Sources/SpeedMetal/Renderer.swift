@@ -50,9 +50,9 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    init(device: MTLDevice, stage: Stage) {
-        self.device = device
+    init(stage: Stage, device: MTLDevice) {
         self.stage  = stage
+        self.device = device
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -65,19 +65,17 @@ class Renderer: NSObject {
         createRaycerAndShaderPipelines()
     }
 
-    func reset() -> Void {
+    private func reset() -> Void {
         frameCount = 0
 
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
 
-        guard // must not exec reset() before mtkView()
+        guard
             let _ = raycerTargets
         else { return }
-        
-        // supposed for function beginning but crashes 
-        // createTexturesAndUpscaler()
+        createTexturesAndUpscaler()
         /*
         let zeroes = Array<vector_float4>(repeating: .zero, count: raycerWidth * raycerHeight)
 
