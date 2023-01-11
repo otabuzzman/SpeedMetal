@@ -95,7 +95,6 @@ class TriangleGeometry: Geometry {
         descriptor.vertexStride  = MemoryLayout<vector_float3>.stride
         descriptor.triangleCount = indices.count / 3
 
-        // Metal 3
         descriptor.primitiveDataBuffer      = perPrimitiveDataBuffer
         descriptor.primitiveDataStride      = MemoryLayout<Triangle>.stride
         descriptor.primitiveDataElementSize = MemoryLayout<Triangle>.stride
@@ -258,7 +257,6 @@ class SphereGeometry: Geometry {
         descriptor.boundingBoxBuffer = boundingBoxBuffer
         descriptor.boundingBoxCount  = spheres.count
 
-        // Metal 3
         descriptor.primitiveDataBuffer      = sphereBuffer
         descriptor.primitiveDataStride      = MemoryLayout<Sphere>.stride
         descriptor.primitiveDataElementSize = MemoryLayout<Sphere>.stride

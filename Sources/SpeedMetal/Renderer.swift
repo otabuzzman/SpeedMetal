@@ -7,8 +7,6 @@ import simd
 class RendererOptions: ObservableObject {
     @Published var lineUp = LineUp.threeByThree
     var framesToRender: UInt32 = 1
-    var usePerPrimitiveData    = false
-    var upscaleFactor: Float   = 1.0
 }
 
 class Renderer: NSObject {
@@ -16,8 +14,14 @@ class Renderer: NSObject {
     private var stage:   Stage
     private var options: RendererOptions
 
-    private var frameWidth: Int  = 0
-    private var frameHeight: Int = 0
+    // options
+    var usePerPrimitiveData    = false
+    var upscaleFactor: Float   = 8.0
+
+    private var frameWidth: Int    = 0
+    private var frameHeight: Int   = 0
+    private var raycerWidth: Int  = 0
+    private var raycerHeight: Int = 0
     private var frameCount: UInt32 = 0
 
     private let maxFramesInFlight = 3
@@ -59,34 +63,40 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
         queue   = device.makeCommandQueue()!
-
-        reset(stage: stage)
+        library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
+        
+        createBuffers()
+        createAccelerationStructures()
+        createRaycerAndShaderPipelines()
     }
 
     func reset(stage: Stage) -> Void {
         self.stage = stage
 
-        frameCount      = 0
+        frameCount = 0
 
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
 
-        guard
-            let raycerTargets = raycerTargets
+		// supposed for function beginning but crashes 
+        guard // must not exec reset() before mtkView()
+            let _ = raycerTargets
         else { return }
 
-        let zeroes = Array<vector_float4>(repeating: .zero, count: frameWidth * frameHeight)
+        createTexturesAndUpscaler()
+        /*
+        let zeroes = Array<vector_float4>(repeating: .zero, count: raycerWidth * raycerHeight)
 
-        for raycerTarget in raycerTargets {
-            raycerTarget.replace(
-                region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
+        for target in raycerTargets {
+            target.replace(
+                region: MTLRegionMake2D(0, 0, raycerWidth, raycerHeight),
                 mipmapLevel: 0,
                 withBytes: zeroes,
-                bytesPerRow: MemoryLayout<vector_float4>.size * frameWidth)
+                bytesPerRow: MemoryLayout<vector_float4>.size * raycerWidth)
         }
+        */
     }
 
     private func updateUniforms() -> Void {
@@ -97,8 +107,8 @@ class Renderer: NSObject {
             .advanced(by: uniformsBufferOffset)
             .bindMemory(to: Uniforms.self, capacity: 1)
 
-        uniforms.pointee.width  = UInt32(frameWidth)
-        uniforms.pointee.height = UInt32(frameHeight)
+        uniforms.pointee.width  = UInt32(raycerWidth)
+        uniforms.pointee.height = UInt32(raycerHeight)
 
         uniforms.pointee.frameCount  = frameCount
         frameCount                  += 1
@@ -106,7 +116,7 @@ class Renderer: NSObject {
         uniforms.pointee.lightCount  = stage.lightCount
 
         let fieldOfView: Float = 45.0 * (Float.pi / 180.0 )
-        let aspectRatio        = Float(frameWidth) / Float(frameHeight)
+        let aspectRatio        = Float(raycerWidth) / Float(raycerHeight)
         let imagePlaneHeight   = tanf(fieldOfView / 2.0)
         let imagePlaneWidth    = aspectRatio * imagePlaneHeight
 
@@ -136,7 +146,6 @@ class Renderer: NSObject {
         for geometry in stage.geometries {
             let geometry = geometry as! Geometry
 
-            // Metal 3
             if geometry.resources().count * MemoryLayout<UInt64>.size > resourcesStride {
                 resourcesStride = UInt32(geometry.resources().count * MemoryLayout<UInt64>.size)
             }
@@ -149,7 +158,6 @@ class Renderer: NSObject {
         for geometryIndex in 0..<stage.geometries.count {
             let geometry = stage.geometries[geometryIndex] as! Geometry
 
-            // Metal 3
             let resources       = geometry.resources()
             let resourceHandles = resourceBuffer.contents().advanced(by: geometryIndex * Int(resourcesStride))
 
@@ -174,11 +182,11 @@ class Renderer: NSObject {
     private func createAccelerationStructures() -> Void {
         primitiveAccelerationStructures = []
 
-        for i in 0..<stage.geometries.count {
-            let geometry = stage.geometries[i] as! Geometry
+        for geometryIndex in 0..<stage.geometries.count {
+            let geometry = stage.geometries[geometryIndex] as! Geometry
 
             let geometryDescriptor = geometry.descriptor()
-            geometryDescriptor.intersectionFunctionTableOffset = i
+            geometryDescriptor.intersectionFunctionTableOffset = geometryIndex
 
             let descriptor = MTLPrimitiveAccelerationStructureDescriptor()
             descriptor.geometryDescriptors = [geometryDescriptor]
@@ -217,7 +225,6 @@ class Renderer: NSObject {
         for geometry in stage.geometries {
             if !(geometry as! Geometry).intersectionFunctionName.isEmpty {
                 useIntersectionFunctions = true
-
                 break
             }
         }
@@ -247,7 +254,7 @@ class Renderer: NSObject {
             intersectionFunctionTable = raycerPipeline.makeIntersectionFunctionTable(
                 descriptor: intersectionFunctionTableDescriptor)
 
-            if !options.usePerPrimitiveData {
+            if !usePerPrimitiveData {
                 intersectionFunctionTable.setBuffer(resourceBuffer, offset: 0, index: 0)
             }
 
@@ -321,9 +328,9 @@ class Renderer: NSObject {
         var resourcesStride = self.resourcesStride
         var function: MTLFunction
 
-        constants.setConstantValue(&resourcesStride,             type: .uint, index: 0)
-        constants.setConstantValue(&useIntersectionFunctions,    type: .bool, index: 1)
-        constants.setConstantValue(&options.usePerPrimitiveData, type: .bool, index: 2)
+        constants.setConstantValue(&resourcesStride,          type: .uint, index: 0)
+        constants.setConstantValue(&useIntersectionFunctions, type: .bool, index: 1)
+        constants.setConstantValue(&usePerPrimitiveData,      type: .bool, index: 2)
 
         do {
             function = try library.makeFunction(name: name, constantValues: constants)
@@ -335,11 +342,11 @@ class Renderer: NSObject {
     }
 
     private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
-        let accelSizes            = device.accelerationStructureSizes(descriptor: descriptor)
-        let accelerationStructure = device.makeAccelerationStructure(size: accelSizes.accelerationStructureSize)!
+        let sizes                 = device.accelerationStructureSizes(descriptor: descriptor)
+        let accelerationStructure = device.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
 
         let scratchBuffer         = device.makeBuffer(
-            length: accelSizes.buildScratchBufferSize,
+            length: sizes.buildScratchBufferSize,
             options: .storageModePrivate)
         let compactedSizeBuffer   = device.makeBuffer(
             length: MemoryLayout<UInt32>.stride,
@@ -377,67 +384,73 @@ class Renderer: NSObject {
 
         return compactedAccelerationStructure
     }
+    
+    private func createTexturesAndUpscaler() -> Void {
+        if upscaleFactor > 1.0 {
+            raycerWidth  = Int(Float(frameWidth) / upscaleFactor)
+            raycerHeight = Int(Float(frameHeight) / upscaleFactor)
+        } else {
+            raycerWidth  = frameWidth
+            raycerHeight = frameHeight
+        }
+            
+        let textureDescriptor         = MTLTextureDescriptor()
+        textureDescriptor.pixelFormat = .rgba32Float
+        textureDescriptor.textureType = .type2D
+        textureDescriptor.width       = raycerWidth
+        textureDescriptor.height      = raycerHeight
+        textureDescriptor.storageMode = .shared
+        textureDescriptor.usage       = [.shaderRead, .shaderWrite]
 
-    private func createSpatialUpscaler() -> Void {
-        let upscaleFactor = options.upscaleFactor
-        let descriptor = MTLFXSpatialScalerDescriptor()
-        descriptor.inputWidth   = frameWidth
-        descriptor.inputHeight  = frameHeight
-        descriptor.outputWidth  = Int(Float(frameWidth) * upscaleFactor)
-        descriptor.outputHeight = Int(Float(frameHeight) * upscaleFactor)
-        descriptor.colorTextureFormat  = .rgba32Float
-        descriptor.outputTextureFormat = .rgba32Float
-        descriptor.colorProcessingMode = .perceptual
+        raycerTargets = [
+            device.makeTexture(descriptor: textureDescriptor)!,
+            device.makeTexture(descriptor: textureDescriptor)!
+        ]
+        
+        var randomValues = [UInt32](repeating: 0, count: raycerWidth * raycerHeight)
 
-        spatialUpscaler = descriptor.makeSpatialScaler(device: device)
+        for i in 0..<raycerWidth * raycerHeight {
+            randomValues[i] = .random(in: 0..<(1024 * 1024))
+        }
+
+        textureDescriptor.pixelFormat = .r32Uint
+        textureDescriptor.usage       = .shaderRead
+
+        randomTexture = device.makeTexture(descriptor: textureDescriptor)!
+        randomTexture.replace(
+            region: MTLRegionMake2D(0, 0, raycerWidth, raycerHeight),
+            mipmapLevel: 0,
+            withBytes: &randomValues,
+            bytesPerRow: MemoryLayout<UInt32>.size * raycerWidth)
+
+        if upscaleFactor > 1.0 {
+            textureDescriptor.pixelFormat = .rgba32Float
+            textureDescriptor.width       = frameWidth
+            textureDescriptor.height      = frameHeight
+            textureDescriptor.usage       = [.shaderRead, .shaderWrite]
+
+            upscaledTarget = device.makeTexture(descriptor: textureDescriptor)!
+
+            let upscalerDescriptor = MTLFXSpatialScalerDescriptor()
+            upscalerDescriptor.inputWidth          = raycerWidth
+            upscalerDescriptor.inputHeight         = raycerHeight
+            upscalerDescriptor.outputWidth         = frameWidth
+            upscalerDescriptor.outputHeight        = frameHeight
+            upscalerDescriptor.colorTextureFormat  = .rgba32Float
+            upscalerDescriptor.outputTextureFormat = .rgba32Float
+            upscalerDescriptor.colorProcessingMode = .perceptual
+
+            spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
+        }
     }
 }
 
 extension Renderer: MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
-        let upscaleFactor = options.upscaleFactor
-        frameWidth  = Int(Float(size.width) / upscaleFactor)
-        frameHeight = Int(Float(size.height) / upscaleFactor)
+        frameWidth  = Int(size.width)
+        frameHeight = Int(size.height)
 
-        let descriptor         = MTLTextureDescriptor()
-        descriptor.pixelFormat = .rgba32Float
-        descriptor.textureType = .type2D
-        descriptor.width       = frameWidth
-        descriptor.height      = frameHeight
-        descriptor.storageMode = .shared
-        descriptor.usage       = [.shaderRead, .shaderWrite]
-
-        raycerTargets = [
-            device.makeTexture(descriptor: descriptor)!,
-            device.makeTexture(descriptor: descriptor)!
-        ]
-
-        if options.upscaleFactor > 1.0 {
-            descriptor.width  = Int(Float(frameWidth) * upscaleFactor)
-            descriptor.height = Int(Float(frameHeight) * upscaleFactor)
-            upscaledTarget = device.makeTexture(descriptor: descriptor)!
-
-            createSpatialUpscaler()
-        }
-
-        var randomValues = [UInt32](repeating: 0, count: frameWidth * frameHeight)
-
-        for i in 0..<frameWidth * frameHeight {
-            randomValues[i] = UInt32.random(in: 0..<(1024 * 1024))
-        }
-
-        descriptor.pixelFormat = .r32Uint
-        descriptor.storageMode = .shared
-        descriptor.usage       = .shaderRead
-
-        randomTexture = device.makeTexture(descriptor: descriptor)!
-        randomTexture.replace(
-            region: MTLRegionMake2D(0, 0, frameWidth, frameHeight),
-            mipmapLevel: 0,
-            withBytes: &randomValues,
-            bytesPerRow: MemoryLayout<UInt32>.size * frameWidth)
-
-        frameCount = 0
+        createTexturesAndUpscaler()
     }
 
     func draw(in view: MTKView) -> Void {
@@ -451,8 +464,8 @@ extension Renderer: MTKViewDelegate {
 
         let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
         let threadgroups          = MTLSizeMake(
-            (frameWidth  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
-            (frameHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
+            (raycerWidth  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
+            (raycerHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
@@ -462,7 +475,7 @@ extension Renderer: MTKViewDelegate {
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
 
         computeEncoder.setBuffer(uniformsBuffer, offset: uniformsBufferOffset, index: 0)
-        if !options.usePerPrimitiveData {
+        if !usePerPrimitiveData {
             computeEncoder.setBuffer(resourceBuffer, offset: 0, index: 1)
         }
         computeEncoder.setBuffer(instanceBuffer, offset: 0, index: 2)
@@ -492,7 +505,7 @@ extension Renderer: MTKViewDelegate {
 
         raycerTargets.swapAt(0, 1)
 
-        if options.upscaleFactor > 1.0 {
+        if upscaleFactor > 1.0 {
             spatialUpscaler.colorTexture = raycerTargets[0]
             spatialUpscaler.outputTexture = upscaledTarget
             spatialUpscaler.encode(commandBuffer: commandBuffer)
@@ -506,7 +519,7 @@ extension Renderer: MTKViewDelegate {
 
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
             renderEncoder.setRenderPipelineState(shaderPipeline)
-            if options.upscaleFactor > 1.0 {
+            if upscaleFactor > 1.0 {
                 renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
             } else {
                 renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
