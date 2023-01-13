@@ -6,9 +6,9 @@ import simd
 
 class Renderer: NSObject {
     private(set) var device: MTLDevice
-
+	
     // options
-    var stage: Stage!
+    var stage: Stage! { didSet { reset() } }
     var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = false
     var upscaleFactor: Float   = 1.0
@@ -66,17 +66,19 @@ class Renderer: NSObject {
     }
 
     private func reset() -> Void {
-        frameCount = 0
+		// options
+		framesToRender      = 1
+		usePerPrimitiveData = false
+		upscaleFactor       = 1.0
+		// privates
+        frameCount      = 0
+		spatialUpscaler = nil
+		upscaledTarget  = nil
 
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
 
-        guard
-            let _ = raycerTargets
-        else { return }
-        createTexturesAndUpscaler()
-        /*
         let zeroes = Array<vector_float4>(repeating: .zero, count: raycerWidth * raycerHeight)
 
         for target in raycerTargets {
@@ -86,7 +88,7 @@ class Renderer: NSObject {
                 withBytes: zeroes,
                 bytesPerRow: MemoryLayout<vector_float4>.size * raycerWidth)
         }
-        */
+        
     }
 
     private func updateUniforms() -> Void {

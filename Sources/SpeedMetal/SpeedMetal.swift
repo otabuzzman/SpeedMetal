@@ -1,11 +1,19 @@
 import MetalKit
 import SwiftUI
 
+enum SMViewControl {
+	case none
+	case lineUp
+	case framesToRender
+}
+
 struct SMView: UIViewRepresentable {
+	var control: SMViewControl
     var lineUp: LineUp
     var framesToRender: UInt32
     
-    init(_ lineUp: LineUp, _ framesToRender: UInt32) {
+    init(_ control: SMViewControl, lineUp: LineUp, framesToRender: UInt32) {
+		self.control        = control
         self.lineUp         = lineUp
         self.framesToRender = framesToRender
     }
@@ -30,41 +38,51 @@ struct SMView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: MTKView, context: Context) {
-        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
-//        context.coordinator.stage = stage
-        context.coordinator.framesToRender = framesToRender
+		switch control {
+		case .none:
+			break
+		case .lineUp:
+			let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+			context.coordinator.stage = stage
+		case .framesToRender:
+			context.coordinator.framesToRender = framesToRender
+		}
     }
 }
 
 @main
 struct SpeedMetal: App {
-    @State var lineUp = LineUp.threeByThree
+	@State var control = SMViewControl.none
+    @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
 
     var body: some Scene {
         WindowGroup {
-            SMView(lineUp, framesToRender)
+            SMView(control, lineUp: lineUp, framesToRender: framesToRender)
             HStack {
                 Button {
+					control = .framesToRender
                     framesToRender += 1
                 } label: {
                     Text("1x")
                         .font(.title2)
                 }
                 Button {
+					control = .framesToRender
                     framesToRender += 10
                 } label: {
                     Text("10x")
                         .font(.title2)
                 }
                 Button {
+					control = .framesToRender
                     framesToRender += 100
                 } label: {
                     Text("100x")
                         .font(.title2)
                 }
                 Button {
-                    framesToRender = 1
+					control = .lineUp
                     lineUp = .oneByOne
                 } label: {
                     Image(systemName: "square")
@@ -73,7 +91,7 @@ struct SpeedMetal: App {
                 }
                 .disabled(lineUp == .oneByOne)
                 Button {
-                    framesToRender = 1
+					control = .lineUp
                     lineUp = .twoByTwo
                 } label: {
                     Image(systemName: "square.grid.2x2")
@@ -82,7 +100,7 @@ struct SpeedMetal: App {
                 }
                 .disabled(lineUp == .twoByTwo)
                 Button {
-                    framesToRender = 1
+					control = .lineUp
                     lineUp = .threeByThree
                 } label: {
                     Image(systemName: "square.grid.3x3")
