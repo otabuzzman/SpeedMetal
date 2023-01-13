@@ -6,7 +6,7 @@ import simd
 
 class Renderer: NSObject {
     private(set) var device: MTLDevice
-	
+
     // options
     var stage: Stage! { didSet { reset() } }
     var framesToRender: UInt32 = 1
@@ -59,21 +59,21 @@ class Renderer: NSObject {
 
         queue   = device.makeCommandQueue()!
         library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
-        
+
         createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
     }
 
     private func reset() -> Void {
-		// options
-		framesToRender      = 1
-		usePerPrimitiveData = false
-		upscaleFactor       = 1.0
-		// privates
+        // options
+        framesToRender      = 1
+        usePerPrimitiveData = false
+        upscaleFactor       = 1.0
+        // privates
         frameCount      = 0
-		spatialUpscaler = nil
-		upscaledTarget  = nil
+        spatialUpscaler = nil
+        upscaledTarget  = nil
 
         createBuffers()
         createAccelerationStructures()
@@ -88,7 +88,7 @@ class Renderer: NSObject {
                 withBytes: zeroes,
                 bytesPerRow: MemoryLayout<vector_float4>.size * raycerWidth)
         }
-        
+
     }
 
     private func updateUniforms() -> Void {
@@ -376,7 +376,7 @@ class Renderer: NSObject {
 
         return compactedAccelerationStructure
     }
-    
+
     private func createTexturesAndUpscaler() -> Void {
         if upscaleFactor > 1.0 {
             raycerWidth  = Int(Float(frameWidth) / upscaleFactor)
@@ -385,7 +385,7 @@ class Renderer: NSObject {
             raycerWidth  = frameWidth
             raycerHeight = frameHeight
         }
-            
+
         let textureDescriptor         = MTLTextureDescriptor()
         textureDescriptor.pixelFormat = .rgba32Float
         textureDescriptor.textureType = .type2D
@@ -398,7 +398,7 @@ class Renderer: NSObject {
             device.makeTexture(descriptor: textureDescriptor)!,
             device.makeTexture(descriptor: textureDescriptor)!
         ]
-        
+
         var randomValues = [UInt32](repeating: 0, count: raycerWidth * raycerHeight)
 
         for i in 0..<raycerWidth * raycerHeight {
