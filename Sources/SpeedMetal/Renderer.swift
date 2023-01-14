@@ -67,8 +67,6 @@ class Renderer: NSObject {
 
     private func resetStage() {
         frameCount      = 0
-        spatialUpscaler = nil
-        upscaledTarget  = nil
 
         createBuffers()
         createAccelerationStructures()
@@ -203,7 +201,6 @@ class Renderer: NSObject {
             instanceDescriptors[instanceIndex].intersectionFunctionTableOffset = 0
             instanceDescriptors[instanceIndex].mask                            = UInt32(instance.mask)
             instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform.transpose)
-
         }
 
         let descriptor = MTLInstanceAccelerationStructureDescriptor()

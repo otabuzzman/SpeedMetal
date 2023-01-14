@@ -68,27 +68,27 @@ struct SpeedMetal: App {
         WindowGroup {
             SMView(control, lineUp: lineUp, framesToRender: framesToRender, upscaleFactor: upscaleFactor)
             HStack {
-                Button {
-                    control = .framesToRender
-                    framesToRender += 1
-                } label: {
-                    Text("1x")
-                        .font(.title2)
+                HStack(spacing: 32) {
+                    Button {
+                        control = .framesToRender
+                        framesToRender += 1
+                    } label: {
+                        MoreFramesIcon(count: 1)
+                    }
+                    Button {
+                        control = .framesToRender
+                        framesToRender += 10
+                    } label: {
+                        MoreFramesIcon(count: 10)
+                    }
+                    Button {
+                        control = .framesToRender
+                        framesToRender += 100
+                    } label: {
+                        MoreFramesIcon(count: 100)
+                    }
                 }
-                Button {
-                    control = .framesToRender
-                    framesToRender += 10
-                } label: {
-                    Text("10x")
-                        .font(.title2)
-                }
-                Button {
-                    control = .framesToRender
-                    framesToRender += 100
-                } label: {
-                    Text("100x")
-                        .font(.title2)
-                }
+                .padding(.trailing, 24)
                 Button {
                     control = .lineUp
                     lineUp = .oneByOne
@@ -116,16 +116,39 @@ struct SpeedMetal: App {
                         .frame(width: 42, height: 42)
                 }
                 .disabled(lineUp == .threeByThree)
-                Button {
-                    control = .upscaleFactor
-                    let factor = upscaleFactor * 2.0
-                    upscaleFactor = factor > 8 ? 1.0 : factor
-                } label: {
-                    UpscalerImage()
-                        .frame(width: 42, height: 42)
+                HStack(spacing: 32) {
+                    Button {
+                        control = .upscaleFactor
+                        let factor = upscaleFactor * 2.0
+                        upscaleFactor = factor > 8 ? 1.0 : factor
+                    } label: {
+                        UpscalerImage()
+                            .frame(width: 42, height: 42)
+                    }
                 }
+                .padding(.leading, 24)
             }
             .padding(.bottom, 8)
+        }
+    }
+}
+
+struct MoreFramesIcon: View {
+    var count: UInt
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(systemName: "play")
+                .resizable()
+                .frame(width: 24, height: 24)
+            Text("|")
+                .font(.system(size: 26, weight: .medium, design: .rounded))
+                .offset(x: 0, y: -2.4)
+            Text("\(count)")
+                .font(.system(size: 20, weight: .medium, design: .rounded))
+            Text("|")
+                .font(.system(size: 26, weight: .medium, design: .rounded))
+                .offset(x: 0, y: -2.4)
         }
     }
 }
