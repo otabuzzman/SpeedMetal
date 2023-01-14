@@ -8,10 +8,10 @@ class Renderer: NSObject {
     private(set) var device: MTLDevice
 
     // options
-    var stage: Stage! { didSet { reset() } }
+    var stage: Stage! { didSet { resetStage() } }
     var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = false
-    var upscaleFactor: Float   = 1.0
+    var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
     private var frameWidth: Int    = 0
     private var frameHeight: Int   = 0
@@ -65,12 +65,7 @@ class Renderer: NSObject {
         createRaycerAndShaderPipelines()
     }
 
-    private func reset() -> Void {
-        // options
-        framesToRender      = 1
-        usePerPrimitiveData = false
-        upscaleFactor       = 1.0
-        // privates
+    private func resetStage() {
         frameCount      = 0
         spatialUpscaler = nil
         upscaledTarget  = nil
@@ -91,7 +86,13 @@ class Renderer: NSObject {
 
     }
 
-    private func updateUniforms() -> Void {
+    private func resetUpscaler() {
+        frameCount = 0
+
+        createTexturesAndUpscaler()
+    }
+
+    private func updateUniforms() {
         uniformsBufferOffset = alignedUniformsSize * uniformsBufferIndex
         uniformsBufferIndex  = (uniformsBufferIndex + 1) % maxFramesInFlight
 
@@ -123,7 +124,7 @@ class Renderer: NSObject {
         uniforms.pointee.camera.up       = up * imagePlaneHeight
     }
 
-    private func createBuffers() -> Void {
+    private func createBuffers() {
         let uniformsBufferSize = alignedUniformsSize * maxFramesInFlight
         uniformsBuffer = device.makeBuffer(
             length: uniformsBufferSize,
@@ -171,7 +172,7 @@ class Renderer: NSObject {
         }
     }
 
-    private func createAccelerationStructures() -> Void {
+    private func createAccelerationStructures() {
         primitiveAccelerationStructures = []
 
         for geometryIndex in 0..<stage.geometries.count {
@@ -213,7 +214,7 @@ class Renderer: NSObject {
         instanceAccelerationStructure = makeAccelerationStructure(descriptor: descriptor)
     }
 
-    private func createRaycerAndShaderPipelines() -> Void {
+    private func createRaycerAndShaderPipelines() {
         for geometry in stage.geometries {
             if !(geometry as! Geometry).intersectionFunctionName.isEmpty {
                 useIntersectionFunctions = true
@@ -377,7 +378,7 @@ class Renderer: NSObject {
         return compactedAccelerationStructure
     }
 
-    private func createTexturesAndUpscaler() -> Void {
+    private func createTexturesAndUpscaler() {
         if upscaleFactor > 1.0 {
             raycerWidth  = Int(Float(frameWidth) / upscaleFactor)
             raycerHeight = Int(Float(frameHeight) / upscaleFactor)
@@ -433,19 +434,22 @@ class Renderer: NSObject {
             upscalerDescriptor.colorProcessingMode = .perceptual
 
             spatialUpscaler = upscalerDescriptor.makeSpatialScaler(device: device)
+        } else {
+            upscaledTarget  = nil
+            spatialUpscaler = nil
         }
     }
 }
 
 extension Renderer: MTKViewDelegate {
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) -> Void {
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
         frameWidth  = Int(size.width)
         frameHeight = Int(size.height)
 
         createTexturesAndUpscaler()
     }
 
-    func draw(in view: MTKView) -> Void {
+    func draw(in view: MTKView) {
         if frameCount == framesToRender {
             return
         }
@@ -498,9 +502,22 @@ extension Renderer: MTKViewDelegate {
         raycerTargets.swapAt(0, 1)
 
         if upscaleFactor > 1.0 {
-            spatialUpscaler.colorTexture = raycerTargets[0]
+            spatialUpscaler.colorTexture  = raycerTargets[0]
             spatialUpscaler.outputTexture = upscaledTarget
             spatialUpscaler.encode(commandBuffer: commandBuffer)
+
+            let blitEncoder = commandBuffer.makeBlitCommandEncoder()!
+            blitEncoder.copy(
+                from: raycerTargets[0],
+                sourceSlice: 0, sourceLevel: 0,
+                sourceOrigin: MTLOriginMake(0, 0, 0),
+                sourceSize: .init(
+                    width: raycerTargets[0].width,
+                    height: raycerTargets[0].height, depth: 1),
+                to: upscaledTarget,
+                destinationSlice: 0, destinationLevel: 0,
+                destinationOrigin: MTLOriginMake(0, 0, 0))
+            blitEncoder.endEncoding()
         }
 
         if let currentDrawable = view.currentDrawable {

@@ -28,10 +28,10 @@ protocol Geometry {
 
     init(device: MTLDevice)
 
-    func clear()           -> Void
-    func createBuffers() -> Void
-    func descriptor()      -> MTLAccelerationStructureGeometryDescriptor
-    func resources()       -> [MTLResource]
+    func clear()
+    func createBuffers()
+    func descriptor() -> MTLAccelerationStructureGeometryDescriptor
+    func resources()  -> [MTLResource]
 }
 
 class TriangleGeometry: Geometry {
@@ -62,7 +62,7 @@ class TriangleGeometry: Geometry {
         triangles.removeAll()
     }
 
-    func createBuffers() -> Void {
+    func createBuffers() {
         indexBuffer = device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
@@ -106,7 +106,7 @@ class TriangleGeometry: Geometry {
         [indexBuffer, vertexNormalBuffer, vertexColorBuffer]
     }
 
-    func addCube(withFaces mask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) -> Void {
+    func addCube(withFaces mask: UInt, color: vector_float3, transform: matrix_float4x4, inwardNormals: Bool) {
         var vertices = [
             vector_float3(-0.5, -0.5, -0.5),
             vector_float3( 0.5, -0.5, -0.5),
@@ -148,7 +148,7 @@ class TriangleGeometry: Geometry {
         }
     }
 
-    private func addCubeFace(withVertices list: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) -> Void {
+    private func addCubeFace(withVertices list: [vector_float3], color: vector_float3, i0: UInt16, i1: UInt16, i2: UInt16, i3: UInt16, inwardNormals: Bool) {
         let v0 = list[Int(i0)]
         let v1 = list[Int(i1)]
         let v2 = list[Int(i2)]
@@ -224,7 +224,7 @@ class SphereGeometry: Geometry {
         spheres.removeAll()
     }
 
-    func createBuffers() -> Void {
+    func createBuffers() {
         var boundingBoxes = [BoundingBox]()
 
         for sphere in spheres {
@@ -268,7 +268,7 @@ class SphereGeometry: Geometry {
         [sphereBuffer]
     }
 
-    func addSphere(withOrigin origin: vector_float3, radius: Float, color: vector_float3) -> Void {
+    func addSphere(withOrigin origin: vector_float3, radius: Float, color: vector_float3) {
         let sphere = Sphere(
             origin:  MTLPackedFloat3(origin),
             radiusSquared: radius * radius,
@@ -365,7 +365,7 @@ class Stage {
             radius: 0.3,
             color: vector_float3(0.725, 0.71, 0.68))
 
-        let hoistInstances = { (_ x: Float, _ y: Float) -> Void in
+        let hoistInstances = { (_ x: Float, _ y: Float) -> () in
             transform = matrix4x4_translation(x * 2.5, y * 2.5, 0.0)
 
             let lightMeshInstance = GeometryInstance(
@@ -421,13 +421,13 @@ class Stage {
         return stage
     }
 
-    func clear() -> Void {
+    func clear() {
         geometries.removeAllObjects()
         instances.removeAll()
         lights.removeAll()
     }
 
-    func createBuffers() -> Void {
+    func createBuffers() {
         for geometry in geometries {
             (geometry as! Geometry).createBuffers()
         }
@@ -438,15 +438,15 @@ class Stage {
             options: [.storageModeShared])
     }
 
-    func addGeometry(geometry: Geometry) -> Void {
+    func addGeometry(geometry: Geometry) {
         geometries.add(geometry)
     }
 
-    func addGeometryInstance(instance: GeometryInstance) -> Void {
+    func addGeometryInstance(instance: GeometryInstance) {
         instances.append(instance)
     }
 
-    func addLight(light: AreaLight) -> Void {
+    func addLight(light: AreaLight) {
         lights.append(light)
     }
 }

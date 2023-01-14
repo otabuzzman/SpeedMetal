@@ -5,17 +5,20 @@ enum SMViewControl {
     case none
     case lineUp
     case framesToRender
+    case upscaleFactor
 }
 
 struct SMView: UIViewRepresentable {
     var control: SMViewControl
     var lineUp: LineUp
     var framesToRender: UInt32
+    var upscaleFactor: Float
 
-    init(_ control: SMViewControl, lineUp: LineUp, framesToRender: UInt32) {
+    init(_ control: SMViewControl, lineUp: LineUp, framesToRender: UInt32, upscaleFactor: Float) {
         self.control        = control
         self.lineUp         = lineUp
         self.framesToRender = framesToRender
+        self.upscaleFactor  = upscaleFactor
     }
 
     func makeCoordinator() -> Renderer {
@@ -42,10 +45,14 @@ struct SMView: UIViewRepresentable {
         case .none:
             break
         case .lineUp:
-            let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+            context.coordinator.framesToRender = 1
             context.coordinator.stage = stage
         case .framesToRender:
             context.coordinator.framesToRender = framesToRender
+        case .upscaleFactor:
+            context.coordinator.framesToRender = 1
+            context.coordinator.upscaleFactor  = upscaleFactor
         }
     }
 }
@@ -55,10 +62,11 @@ struct SpeedMetal: App {
     @State var control = SMViewControl.none
     @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
+    @State var upscaleFactor: Float   = 1.0
 
     var body: some Scene {
         WindowGroup {
-            SMView(control, lineUp: lineUp, framesToRender: framesToRender)
+            SMView(control, lineUp: lineUp, framesToRender: framesToRender, upscaleFactor: upscaleFactor)
             HStack {
                 Button {
                     control = .framesToRender
@@ -108,8 +116,36 @@ struct SpeedMetal: App {
                         .frame(width: 42, height: 42)
                 }
                 .disabled(lineUp == .threeByThree)
+                Button {
+                    control = .upscaleFactor
+                    let factor = upscaleFactor * 2.0
+                    upscaleFactor = factor > 8 ? 1.0 : factor
+                } label: {
+                    UpscalerImage()
+                        .frame(width: 42, height: 42)
+                }
             }
             .padding(.bottom, 8)
+        }
+    }
+}
+
+struct UpscalerImage: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let w = geometry.size.width
+            let h = geometry.size.height
+            ZStack(alignment: .bottomLeading) {
+                Image(systemName: "square")
+                    .resizable()
+                Image(systemName: "square.fill")
+                    .resizable()
+                    .frame(width: w / 2.0, height: h / 2.0)
+                Image(systemName: "arrow.up.right")
+                    .resizable()
+                    .frame(width: w / 2.0, height: h / 2.0)
+                    .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
+            }
         }
     }
 }
