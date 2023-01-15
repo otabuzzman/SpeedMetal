@@ -4,22 +4,17 @@ import SwiftUI
 enum SMViewControl {
     case none
     case lineUp
-    case framesToRender
+    case nextFrame
+    case next10Frames
+    case next100Frames
     case upscaleFactor
 }
 
 struct SMView: UIViewRepresentable {
-    var control: SMViewControl
+    @Binding var control: SMViewControl
     var lineUp: LineUp
-    var framesToRender: UInt32
     var upscaleFactor: Float
-
-    init(_ control: SMViewControl, lineUp: LineUp, framesToRender: UInt32, upscaleFactor: Float) {
-        self.control        = control
-        self.lineUp         = lineUp
-        self.framesToRender = framesToRender
-        self.upscaleFactor  = upscaleFactor
-    }
+    @Binding var commandBufferTime: TimeInterval
 
     func makeCoordinator() -> Renderer {
         guard
@@ -29,7 +24,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device)
+        return Renderer(stage: stage, device: device, commandBufferTime: $commandBufferTime)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -48,12 +43,17 @@ struct SMView: UIViewRepresentable {
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
             context.coordinator.framesToRender = 1
             context.coordinator.stage = stage
-        case .framesToRender:
-            context.coordinator.framesToRender = framesToRender
+        case .nextFrame:
+            context.coordinator.framesToRender = 1
+        case .next10Frames:
+            context.coordinator.framesToRender = 10
+        case .next100Frames:
+            context.coordinator.framesToRender = 100
         case .upscaleFactor:
             context.coordinator.framesToRender = 1
             context.coordinator.upscaleFactor  = upscaleFactor
         }
+        control = .none
     }
 }
 
@@ -61,29 +61,32 @@ struct SMView: UIViewRepresentable {
 struct SpeedMetal: App {
     @State var control = SMViewControl.none
     @State var lineUp  = LineUp.threeByThree
-    @State var framesToRender: UInt32 = 1
     @State var upscaleFactor: Float   = 1.0
+    @State var commandBufferTime: TimeInterval = 0
 
     var body: some Scene {
         WindowGroup {
-            SMView(control, lineUp: lineUp, framesToRender: framesToRender, upscaleFactor: upscaleFactor)
+            ZStack(alignment: .topLeading) {
+                SMView(control: $control, lineUp: lineUp, upscaleFactor: upscaleFactor, commandBufferTime: $commandBufferTime)
+                Text("Command Buffer \u{2300}t \(Int(commandBufferTime * 1000)) ms")
+                    .font(.system(size: 36, weight: .semibold, design: .rounded))
+                    .foregroundColor(.gray)
+                    .padding(16)
+            }
             HStack {
                 HStack(spacing: 32) {
                     Button {
-                        control = .framesToRender
-                        framesToRender += 1
+                        control = .nextFrame
                     } label: {
                         MoreFramesIcon(count: 1)
                     }
                     Button {
-                        control = .framesToRender
-                        framesToRender += 10
+                        control = .next10Frames
                     } label: {
                         MoreFramesIcon(count: 10)
                     }
                     Button {
-                        control = .framesToRender
-                        framesToRender += 100
+                        control = .next100Frames
                     } label: {
                         MoreFramesIcon(count: 100)
                     }
@@ -135,7 +138,7 @@ struct SpeedMetal: App {
 
 struct MoreFramesIcon: View {
     var count: UInt
-    
+
     var body: some View {
         HStack(spacing: 0) {
             Image(systemName: "play")

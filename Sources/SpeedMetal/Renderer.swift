@@ -9,7 +9,7 @@ class Renderer: NSObject {
 
     // options
     var stage: Stage! { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1
+    var framesToRender: UInt32 = 1 { didSet { frameCount = 0 } }
     var usePerPrimitiveData    = false
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
@@ -50,9 +50,13 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    init(stage: Stage, device: MTLDevice) {
+    private var t0: TimeInterval = 0
+    @Binding private var commandBufferTime: TimeInterval
+
+    init(stage: Stage, device: MTLDevice, commandBufferTime: Binding<TimeInterval>) {
         self.stage  = stage
         self.device = device
+        _commandBufferTime = commandBufferTime
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -66,7 +70,7 @@ class Renderer: NSObject {
     }
 
     private func resetStage() {
-        frameCount      = 0
+        frameCount = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -447,9 +451,11 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        if frameCount == framesToRender {
+        if frameCount > framesToRender {
             return
         }
+
+        t0 = Date.timeIntervalSinceReferenceDate
 
         maxFramesSignal.wait()
 
@@ -463,6 +469,7 @@ extension Renderer: MTKViewDelegate {
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
+            commandBufferTime = Date.timeIntervalSinceReferenceDate - t0
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
