@@ -22,7 +22,8 @@ SpeedMetal erfordert iOS/ iPadOS 16 und einen M1 Prozessor. Die Entwicklung der 
 ### Links
 - [Metal Documentation](https://developer.apple.com/documentation/metal)
 - [Metal 3 Overview](https://developer.apple.com/metal/)
-*Metal 3 on WWDC 2022 (ausgewählte Videos zum Artikel)*
+
+**Metal 3 on WWDC 2022 (ausgewählte Videos zum Artikel)**
 - [Discover Metal 3](https://developer.apple.com/videos/play/wwdc2022/10066/)
 - [Maximize your Metal ray tracing performance](https://developer.apple.com/videos/play/wwdc2022/10105/)
 - [Target and optimize GPU binaries with Metal 3](https://developer.apple.com/videos/play/wwdc2022/10102/)
