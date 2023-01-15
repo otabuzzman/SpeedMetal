@@ -4,15 +4,14 @@ import SwiftUI
 enum SMViewControl {
     case none
     case lineUp
-    case nextFrame
-    case next10Frames
-    case next100Frames
+    case framesToRender
     case upscaleFactor
 }
 
 struct SMView: UIViewRepresentable {
     @Binding var control: SMViewControl
     var lineUp: LineUp
+    @Binding var framesToRender: UInt32
     var upscaleFactor: Float
     @Binding var commandBufferTime: TimeInterval
 
@@ -42,16 +41,14 @@ struct SMView: UIViewRepresentable {
         case .lineUp:
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
             context.coordinator.framesToRender = 1
-            context.coordinator.stage = stage
-        case .nextFrame:
-            context.coordinator.framesToRender = 1
-        case .next10Frames:
-            context.coordinator.framesToRender = 10
-        case .next100Frames:
-            context.coordinator.framesToRender = 100
+            context.coordinator.stage          = stage
+            framesToRender = 1
+        case .framesToRender:
+            context.coordinator.framesToRender = framesToRender
         case .upscaleFactor:
             context.coordinator.framesToRender = 1
             context.coordinator.upscaleFactor  = upscaleFactor
+            framesToRender = 1
         }
         control = .none
     }
@@ -61,13 +58,14 @@ struct SMView: UIViewRepresentable {
 struct SpeedMetal: App {
     @State var control = SMViewControl.none
     @State var lineUp  = LineUp.threeByThree
+    @State var framesToRender: UInt32 = 1
     @State var upscaleFactor: Float   = 1.0
     @State var commandBufferTime: TimeInterval = 0
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, upscaleFactor: upscaleFactor, commandBufferTime: $commandBufferTime)
+                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTime: $commandBufferTime)
                 Text("Command Buffer \u{2300}t \(Int(commandBufferTime * 1000)) ms")
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
@@ -76,17 +74,20 @@ struct SpeedMetal: App {
             HStack {
                 HStack(spacing: 32) {
                     Button {
-                        control = .nextFrame
+                        control = .framesToRender
+                        framesToRender += 1
                     } label: {
                         MoreFramesIcon(count: 1)
                     }
                     Button {
-                        control = .next10Frames
+                        control = .framesToRender
+                        framesToRender += 10
                     } label: {
                         MoreFramesIcon(count: 10)
                     }
                     Button {
-                        control = .next100Frames
+                        control = .framesToRender
+                        framesToRender += 100
                     } label: {
                         MoreFramesIcon(count: 100)
                     }

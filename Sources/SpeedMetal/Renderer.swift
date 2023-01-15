@@ -9,7 +9,7 @@ class Renderer: NSObject {
 
     // options
     var stage: Stage! { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1 { didSet { frameCount = 0 } }
+    var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = false
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
