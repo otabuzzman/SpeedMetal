@@ -50,13 +50,13 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    private var t0: TimeInterval = 0
-    @Binding private var commandBufferTime: TimeInterval
+    private var commandBufferTimeSum: TimeInterval = 0
+    @Binding private var commandBufferTimeAvg: TimeInterval
 
-    init(stage: Stage, device: MTLDevice, commandBufferTime: Binding<TimeInterval>) {
+    init(stage: Stage, device: MTLDevice, commandBufferTimeAvg: Binding<TimeInterval>) {
         self.stage  = stage
         self.device = device
-        _commandBufferTime = commandBufferTime
+        _commandBufferTimeAvg = commandBufferTimeAvg
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -71,6 +71,7 @@ class Renderer: NSObject {
 
     private func resetStage() {
         frameCount = 0
+        commandBufferTimeSum = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -90,6 +91,7 @@ class Renderer: NSObject {
 
     private func resetUpscaler() {
         frameCount = 0
+        commandBufferTimeSum = 0
 
         createTexturesAndUpscaler()
     }
@@ -455,8 +457,6 @@ extension Renderer: MTKViewDelegate {
             return
         }
 
-        t0 = Date.timeIntervalSinceReferenceDate
-
         maxFramesSignal.wait()
 
         updateUniforms()
@@ -466,10 +466,12 @@ extension Renderer: MTKViewDelegate {
             (raycerWidth  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
             (raycerHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
+        let t0 = Date.timeIntervalSinceReferenceDate
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
-            commandBufferTime = Date.timeIntervalSinceReferenceDate - t0
+            commandBufferTimeSum += Date.timeIntervalSinceReferenceDate - t0
+            commandBufferTimeAvg = commandBufferTimeSum / Double(frameCount)
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!

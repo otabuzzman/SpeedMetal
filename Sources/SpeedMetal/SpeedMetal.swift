@@ -13,7 +13,7 @@ struct SMView: UIViewRepresentable {
     var lineUp: LineUp
     @Binding var framesToRender: UInt32
     var upscaleFactor: Float
-    @Binding var commandBufferTime: TimeInterval
+    @Binding var commandBufferTimeAvg: TimeInterval
 
     func makeCoordinator() -> Renderer {
         guard
@@ -23,7 +23,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device, commandBufferTime: $commandBufferTime)
+        return Renderer(stage: stage, device: device, commandBufferTimeAvg: $commandBufferTimeAvg)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -37,9 +37,9 @@ struct SMView: UIViewRepresentable {
     func updateUIView(_ view: MTKView, context: Context) {
         switch control {
         case .none:
-            break
+            return
         case .lineUp:
-        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+            let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
             context.coordinator.framesToRender = 1
             context.coordinator.stage          = stage
             framesToRender = 1
@@ -50,7 +50,7 @@ struct SMView: UIViewRepresentable {
             context.coordinator.upscaleFactor  = upscaleFactor
             framesToRender = 1
         }
-        control = .none
+        control = .none // prevent last command from running after Renderer updates Binding
     }
 }
 
@@ -60,13 +60,13 @@ struct SpeedMetal: App {
     @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
     @State var upscaleFactor: Float   = 1.0
-    @State var commandBufferTime: TimeInterval = 0
+    @State var commandBufferTimeAvg: TimeInterval = 0
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTime: $commandBufferTime)
-                Text("Command Buffer \u{2300}t \(Int(commandBufferTime * 1000)) ms")
+                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTimeAvg: $commandBufferTimeAvg)
+                Text("Command Buffer \u{2300}t \(Int(commandBufferTimeAvg * 1000)) ms")
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .padding(16)
