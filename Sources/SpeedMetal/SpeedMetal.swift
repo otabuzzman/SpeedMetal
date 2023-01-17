@@ -73,6 +73,7 @@ struct SpeedMetal: App {
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .padding(16)
+                RaycerTarget(upscaleFactor: upscaleFactor)
             }
             HStack {
                 HStack(spacing: 32) {
@@ -129,7 +130,7 @@ struct SpeedMetal: App {
                         let factor = upscaleFactor * 2.0
                         upscaleFactor = factor > 8 ? 1.0 : factor
                     } label: {
-                        UpscalerImage()
+                        UpscalerIcon()
                             .frame(width: 42, height: 42)
                     }
                     .disabled(drawLoopEnabled)
@@ -161,7 +162,7 @@ struct MoreFramesIcon: View {
     }
 }
 
-struct UpscalerImage: View {
+struct UpscalerIcon: View {
     var body: some View {
         GeometryReader { geometry in
             let w = geometry.size.width
@@ -176,6 +177,25 @@ struct UpscalerImage: View {
                     .resizable()
                     .frame(width: w / 2.0, height: h / 2.0)
                     .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
+            }
+        }
+    }
+}
+
+struct RaycerTarget: View {
+    var upscaleFactor: Float
+    
+    var body: some View {
+        GeometryReader { dim in
+            VStack(alignment: .leading) {
+                let upscaleFactor = CGFloat(upscaleFactor)
+                // reverse map upscale factor 2...8 on line width 8...2
+                let lineWidth = 8 - upscaleFactor / 8 * 6
+                Spacer()
+                RoundedRectangle(cornerRadius: 8, style: .circular)
+                    .stroke(Color.accentColor.opacity(upscaleFactor > 1 ? 1 : 0), lineWidth: lineWidth)
+                    .offset(x: lineWidth / 2, y: -lineWidth / 2)
+                    .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
             }
         }
     }
