@@ -14,6 +14,7 @@ struct SMView: UIViewRepresentable {
     @Binding var framesToRender: UInt32
     var upscaleFactor: Float
     @Binding var commandBufferTimeAvg: TimeInterval
+    @Binding var drawLoopEnabled: Bool
 
     func makeCoordinator() -> Renderer {
         guard
@@ -23,7 +24,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device, commandBufferTimeAvg: $commandBufferTimeAvg)
+        return Renderer(stage: stage, device: device, commandBufferTimeAvg: $commandBufferTimeAvg, enabled: $drawLoopEnabled)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -50,7 +51,7 @@ struct SMView: UIViewRepresentable {
             context.coordinator.upscaleFactor  = upscaleFactor
             framesToRender = 1
         }
-        control = .none // prevent last command from running after Renderer updates Binding
+        control = .none // prevent last command running after Renderer updates Binding
     }
 }
 
@@ -61,11 +62,12 @@ struct SpeedMetal: App {
     @State var framesToRender: UInt32 = 1
     @State var upscaleFactor: Float   = 1.0
     @State var commandBufferTimeAvg: TimeInterval = 0
+    @State var drawLoopEnabled = true
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTimeAvg: $commandBufferTimeAvg)
+                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTimeAvg: $commandBufferTimeAvg, drawLoopEnabled: $drawLoopEnabled)
                 Text("Command Buffer \u{2300}t \(Int(commandBufferTimeAvg * 1000)) ms")
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
@@ -101,7 +103,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(lineUp == .oneByOne)
+                .disabled(lineUp == .oneByOne || drawLoopEnabled)
                 Button {
                     control = .lineUp
                     lineUp = .twoByTwo
@@ -110,7 +112,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(lineUp == .twoByTwo)
+                .disabled(lineUp == .twoByTwo || drawLoopEnabled)
                 Button {
                     control = .lineUp
                     lineUp = .threeByThree
@@ -119,7 +121,7 @@ struct SpeedMetal: App {
                         .resizable()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(lineUp == .threeByThree)
+                .disabled(lineUp == .threeByThree || drawLoopEnabled)
                 HStack(spacing: 32) {
                     Button {
                         control = .upscaleFactor
@@ -129,6 +131,7 @@ struct SpeedMetal: App {
                         UpscalerImage()
                             .frame(width: 42, height: 42)
                     }
+                    .disabled(drawLoopEnabled)
                 }
                 .padding(.leading, 24)
             }

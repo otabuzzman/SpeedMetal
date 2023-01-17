@@ -8,8 +8,8 @@ class Renderer: NSObject {
     private(set) var device: MTLDevice
 
     // options
-    var stage: Stage! { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1
+    var stage: Stage!                { didSet { resetStage() } }
+    var framesToRender: UInt32 = 1   { didSet { enabled = true } }
     var usePerPrimitiveData    = false
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
@@ -53,10 +53,13 @@ class Renderer: NSObject {
     private var commandBufferTimeSum: TimeInterval = 0
     @Binding private var commandBufferTimeAvg: TimeInterval
 
-    init(stage: Stage, device: MTLDevice, commandBufferTimeAvg: Binding<TimeInterval>) {
+    @Binding private var enabled: Bool
+
+    init(stage: Stage, device: MTLDevice, commandBufferTimeAvg: Binding<TimeInterval>, enabled: Binding<Bool>) {
         self.stage  = stage
         self.device = device
         _commandBufferTimeAvg = commandBufferTimeAvg
+        _enabled = enabled
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -72,6 +75,7 @@ class Renderer: NSObject {
     private func resetStage() {
         frameCount = 0
         commandBufferTimeSum = 0
+        enabled = true
 
         createBuffers()
         createAccelerationStructures()
@@ -92,6 +96,7 @@ class Renderer: NSObject {
     private func resetUpscaler() {
         frameCount = 0
         commandBufferTimeSum = 0
+        enabled = true
 
         createTexturesAndUpscaler()
     }
@@ -453,8 +458,9 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
+        if !enabled { return }
         if frameCount > framesToRender {
-            return
+            enabled = false
         }
 
         maxFramesSignal.wait()
