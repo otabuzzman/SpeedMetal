@@ -458,9 +458,12 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        if !enabled { return }
+        if !enabled {
+            return
+        }
         if frameCount > framesToRender {
-            enabled = false
+            enabled       = false
+            view.isPaused = true
         }
 
         maxFramesSignal.wait()

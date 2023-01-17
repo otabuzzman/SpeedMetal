@@ -51,7 +51,8 @@ struct SMView: UIViewRepresentable {
             context.coordinator.upscaleFactor  = upscaleFactor
             framesToRender = 1
         }
-        control = .none // prevent last command running after Renderer updates Binding
+        control = .none // prevent last command running after Renderer updates Bindings
+        view.isPaused = false
     }
 }
 
