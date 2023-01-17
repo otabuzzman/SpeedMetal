@@ -4,6 +4,11 @@ import MetalKit
 import MetalFX
 import simd
 
+struct RendererTimes {
+    var commandBufferSum: TimeInterval = 0
+    var commandBufferAvg: TimeInterval = 0
+}
+
 class Renderer: NSObject {
     private(set) var device: MTLDevice
 
@@ -50,16 +55,17 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    private var commandBufferTimeSum: TimeInterval = 0
-    @Binding private var commandBufferTimeAvg: TimeInterval
+    private var commandBufferSum: TimeInterval = 0
+    private var commandBufferAvg: TimeInterval = 0
 
     @Binding private var enabled: Bool
+    @Binding private var times:   RendererTimes
 
-    init(stage: Stage, device: MTLDevice, commandBufferTimeAvg: Binding<TimeInterval>, enabled: Binding<Bool>) {
+    init(stage: Stage, device: MTLDevice, enabled: Binding<Bool>, times: Binding<RendererTimes>) {
         self.stage  = stage
         self.device = device
-        _commandBufferTimeAvg = commandBufferTimeAvg
         _enabled = enabled
+        _times   = times
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -73,9 +79,9 @@ class Renderer: NSObject {
     }
 
     private func resetStage() {
-        frameCount = 0
-        commandBufferTimeSum = 0
-        enabled = true
+        frameCount       = 0
+        enabled          = true
+        commandBufferSum = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -94,9 +100,9 @@ class Renderer: NSObject {
     }
 
     private func resetUpscaler() {
-        frameCount = 0
-        commandBufferTimeSum = 0
-        enabled = true
+        frameCount       = 0
+        enabled          = true
+        commandBufferSum = 0
 
         createTexturesAndUpscaler()
     }
@@ -479,8 +485,8 @@ extension Renderer: MTKViewDelegate {
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
-            commandBufferTimeSum += Date.timeIntervalSinceReferenceDate - t0
-            commandBufferTimeAvg = commandBufferTimeSum / Double(frameCount)
+            commandBufferSum += Date.timeIntervalSinceReferenceDate - t0
+            commandBufferAvg = commandBufferSum / Double(frameCount)
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
@@ -556,6 +562,8 @@ extension Renderer: MTKViewDelegate {
         }
 
         commandBuffer.commit()
+
+        times = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg)
     }
 }
 

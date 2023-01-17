@@ -13,7 +13,7 @@ struct SMView: UIViewRepresentable {
     var lineUp: LineUp
     @Binding var framesToRender: UInt32
     var upscaleFactor: Float
-    @Binding var commandBufferTimeAvg: TimeInterval
+    @Binding var rendererTimes: RendererTimes
     @Binding var drawLoopEnabled: Bool
 
     func makeCoordinator() -> Renderer {
@@ -24,7 +24,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device, commandBufferTimeAvg: $commandBufferTimeAvg, enabled: $drawLoopEnabled)
+        return Renderer(stage: stage, device: device, enabled: $drawLoopEnabled, times: rendererTimes)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -62,14 +62,14 @@ struct SpeedMetal: App {
     @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
     @State var upscaleFactor: Float   = 1.0
-    @State var commandBufferTimeAvg: TimeInterval = 0
+    @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, commandBufferTimeAvg: $commandBufferTimeAvg, drawLoopEnabled: $drawLoopEnabled)
-                Text("Command Buffer \u{2300}t \(Int(commandBufferTimeAvg * 1000)) ms")
+                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                Text("Command Buffer \u{2300}t \(Int(rendererTimes.commandBufferAvg * 1000)) ms")
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
                     .padding(16)
