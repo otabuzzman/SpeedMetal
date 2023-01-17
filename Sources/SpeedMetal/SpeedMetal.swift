@@ -24,7 +24,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device, enabled: $drawLoopEnabled, times: rendererTimes)
+        return Renderer(stage: stage, device: device, enabled: $drawLoopEnabled, times: $rendererTimes)
     }
 
     func makeUIView(context: Context) -> MTKView {
