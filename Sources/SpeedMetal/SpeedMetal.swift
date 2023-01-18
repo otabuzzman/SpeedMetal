@@ -65,14 +65,38 @@ struct SpeedMetal: App {
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
 
+    private var decimalFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.usesGroupingSeparator = false
+        return formatter
+    }()
+
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
                 SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
-                Text("Command Buffer \u{2300}t \(Int(rendererTimes.commandBufferAvg * 1000)) ms")
-                    .font(.system(size: 36, weight: .semibold, design: .rounded))
-                    .foregroundColor(.gray)
-                    .padding(16)
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Ausführungszeiten (ms)")
+                        Text("GPU (3 Command Buffer)")
+                        Text("Renderer.draw Funktion")
+                    }
+                    .padding(.trailing, 24)
+                    VStack {
+                        Text("\u{03a3}")
+                        Text(String(format: "%d", Int(rendererTimes.commandBufferSum * 1000)))
+                        Text(String(format: "%d", Int(rendererTimes.drawFunctionSum * 1000)))
+                    }
+                    .padding(.trailing, 12)
+                    VStack {
+                        Text("\u{2300}")
+                        Text("\(Int(rendererTimes.commandBufferAvg * 1000))")
+                        Text("\(Int(rendererTimes.drawFunctionAvg * 1000))")
+                    }
+                }
+                .font(.system(.headline, design: .monospaced, weight: .regular))
+                .foregroundColor(.gray)
+                .padding(24)
                 RaycerTarget(upscaleFactor: upscaleFactor)
             }
             HStack {
@@ -81,19 +105,19 @@ struct SpeedMetal: App {
                         control = .framesToRender
                         framesToRender += 1
                     } label: {
-                        MoreFramesIcon(count: 1)
+                        MoreFramesIcon(label: 1)
                     }
                     Button {
                         control = .framesToRender
                         framesToRender += 10
                     } label: {
-                        MoreFramesIcon(count: 10)
+                        MoreFramesIcon(label: 10)
                     }
                     Button {
                         control = .framesToRender
                         framesToRender += 100
                     } label: {
-                        MoreFramesIcon(count: 100)
+                        MoreFramesIcon(label: 100)
                     }
                 }
                 .padding(.trailing, 24)
@@ -143,7 +167,7 @@ struct SpeedMetal: App {
 }
 
 struct MoreFramesIcon: View {
-    var count: UInt
+    var label: UInt
 
     var body: some View {
         HStack(spacing: 0) {
@@ -153,7 +177,7 @@ struct MoreFramesIcon: View {
             Text("|")
                 .font(.system(size: 26, weight: .medium, design: .rounded))
                 .offset(x: 0, y: -2.4)
-            Text("\(count)")
+            Text("\(label)")
                 .font(.system(size: 20, weight: .medium, design: .rounded))
             Text("|")
                 .font(.system(size: 26, weight: .medium, design: .rounded))
@@ -184,7 +208,7 @@ struct UpscalerIcon: View {
 
 struct RaycerTarget: View {
     var upscaleFactor: Float
-    
+
     var body: some View {
         GeometryReader { dim in
             VStack(alignment: .leading) {

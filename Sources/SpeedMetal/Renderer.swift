@@ -7,6 +7,8 @@ import simd
 struct RendererTimes {
     var commandBufferSum: TimeInterval = 0
     var commandBufferAvg: TimeInterval = 0
+    var drawFunctionSum: TimeInterval  = 0
+    var drawFunctionAvg: TimeInterval  = 0
 }
 
 class Renderer: NSObject {
@@ -57,6 +59,8 @@ class Renderer: NSObject {
 
     private var commandBufferSum: TimeInterval = 0
     private var commandBufferAvg: TimeInterval = 0
+    private var drawFunctionSum: TimeInterval = 0
+    private var drawFunctionAvg: TimeInterval = 0
 
     @Binding private var enabled: Bool
     @Binding private var times:   RendererTimes
@@ -82,6 +86,7 @@ class Renderer: NSObject {
         frameCount       = 0
         enabled          = true
         commandBufferSum = 0
+        drawFunctionSum  = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -103,7 +108,7 @@ class Renderer: NSObject {
         frameCount       = 0
         enabled          = true
         commandBufferSum = 0
-
+        drawFunctionSum  =   
         createTexturesAndUpscaler()
     }
 
@@ -471,9 +476,9 @@ extension Renderer: MTKViewDelegate {
             enabled       = false
             view.isPaused = true
         }
-
         maxFramesSignal.wait()
 
+        let t0 = CFAbsoluteTimeGetCurrent()
         updateUniforms()
 
         let threadsPerThreadgroup = MTLSizeMake(8, 8, 1)
@@ -481,11 +486,10 @@ extension Renderer: MTKViewDelegate {
             (raycerWidth  + threadsPerThreadgroup.width  - 1) / threadsPerThreadgroup.width,
             (raycerHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
-        let t0 = Date.timeIntervalSinceReferenceDate
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
-            commandBufferSum += Date.timeIntervalSinceReferenceDate - t0
+            commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
             commandBufferAvg = commandBufferSum / Double(frameCount)
         }
 
@@ -563,7 +567,9 @@ extension Renderer: MTKViewDelegate {
 
         commandBuffer.commit()
 
-        times = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg)
+        drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
+        drawFunctionAvg = drawFunctionSum / Double(frameCount)
+        times = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
     }
 }
 
