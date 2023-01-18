@@ -65,11 +65,11 @@ class Renderer: NSObject {
     @Binding private var enabled: Bool
     @Binding private var times:   RendererTimes
 
-    init(stage: Stage, device: MTLDevice, enabled: Binding<Bool>, times: Binding<RendererTimes>) {
+    init(stage: Stage, enabled: Binding<Bool>, times: Binding<RendererTimes>, device: MTLDevice) {
         self.stage  = stage
+        _enabled    = enabled
+        _times      = times
         self.device = device
-        _enabled = enabled
-        _times   = times
         super.init()
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
@@ -108,7 +108,8 @@ class Renderer: NSObject {
         frameCount       = 0
         enabled          = true
         commandBufferSum = 0
-        drawFunctionSum  =   
+        drawFunctionSum  = 0
+
         createTexturesAndUpscaler()
     }
 

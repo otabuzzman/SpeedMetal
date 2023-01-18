@@ -24,7 +24,7 @@ struct SMView: UIViewRepresentable {
             fatalError("no Metal 3 capable GPU available")
         }
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, device: device, enabled: $drawLoopEnabled, times: $rendererTimes)
+        return Renderer(stage: stage, enabled: $drawLoopEnabled, times: $rendererTimes, device: device)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -64,12 +64,6 @@ struct SpeedMetal: App {
     @State var upscaleFactor: Float   = 1.0
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
-
-    private var decimalFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.usesGroupingSeparator = false
-        return formatter
-    }()
 
     var body: some Scene {
         WindowGroup {
