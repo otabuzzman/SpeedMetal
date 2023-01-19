@@ -51,7 +51,7 @@ struct SMView: UIViewRepresentable {
             context.coordinator.upscaleFactor  = upscaleFactor
             framesToRender = 1
         }
-        control = .none // prevent last command running after Renderer updates Bindings
+        control = .none // prevent last command running after Renderer updated Bindings
         view.isPaused = false
     }
 }
@@ -207,7 +207,7 @@ struct RaycerTarget: View {
         GeometryReader { dim in
             VStack(alignment: .leading) {
                 let upscaleFactor = CGFloat(upscaleFactor)
-                // reverse map upscale factor 2...8 on line width 8...2
+                // inversely map upscale factor 2...8 to linewidth 8...2
                 let lineWidth = 8 - upscaleFactor / 8 * 6
                 Spacer()
                 RoundedRectangle(cornerRadius: 8, style: .circular)
