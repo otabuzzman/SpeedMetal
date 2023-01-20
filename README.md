@@ -6,7 +6,7 @@ Nach dem Start rendert SpeedMetal das erste Frame einer Szene mit neun Cornell B
 
 Am oberen Bildrand aktualisiert die App die Laufzeit der Kommandos im Command Buffer, den SpeedMetal für jedes Frame ausführt.
 
-SpeedMetal erfordert iOS/ iPadOS 16 und einen M1 Prozessor. Die Entwicklung der App erfolgte mit Swift Playgrounds 4 (SP4).
+SpeedMetal erfordert iOS/ iPadOS 16 und einen A13 Prozessor. Die Entwicklung der App erfolgte mit Swift Playgrounds 4 (SP4).
 
 ### Installation
 
@@ -17,7 +17,8 @@ SpeedMetal erfordert iOS/ iPadOS 16 und einen M1 Prozessor. Die Entwicklung der 
 1. SP4 installieren und neue App öffnen
 2. Vordefinierte Swift-Dateien in neuer App löschen
 3. Swift-Dateien aus Repository in neue App übertragen (copy&paste)
-4. App in SP4 editieren (optional) und ausführen
+4. Grafiken aus Repository mit SP4 in neuer App hinzufügen (_Insert from..._)
+5. App in SP4 editieren (optional) und ausführen
 
 ### Links
 - [Metal Documentation](https://developer.apple.com/documentation/metal)
