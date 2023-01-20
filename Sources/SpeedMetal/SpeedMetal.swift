@@ -73,6 +73,7 @@ struct SpeedMetal: App {
                 SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, noMetal3Hint: $noMetal3Hint, noMetal3Show: $noMetal3Show)
                 DisplayRendererTimes(runtimes: rendererTimes)
                 HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                Contact()
             }
             .alert("Den Metal 3 Upscaler unterstützt dein Device leider nicht.", isPresented: $noMetal3Show) {
                 Button("Schade 😕") {}
@@ -152,18 +153,24 @@ struct DisplayRendererTimes: View {
         HStack {
             VStack(alignment: .leading) {
                 Text("Ausführungszeiten (ms)")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
                 Text("GPU (3 Command Buffer)")
                 Text("Renderer.draw Funktion")
             }
             .padding(.trailing, 24)
             VStack {
                 Text("\u{03a3}")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
                 Text(String(format: "%d", Int(runtimes.commandBufferSum * 1000)))
                 Text(String(format: "%d", Int(runtimes.drawFunctionSum * 1000)))
             }
             .padding(.trailing, 12)
             VStack {
                 Text("\u{2300}")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
                 Text("\(Int(runtimes.commandBufferAvg * 1000))")
                 Text("\(Int(runtimes.drawFunctionAvg * 1000))")
             }
@@ -230,5 +237,30 @@ struct UpscalerIcon: View {
                     .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
             }
         }
+    }
+}
+
+struct Contact: View {
+    var body: some View {
+        HStack( spacing: 12) {
+            Spacer()
+            Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
+                Image("mac&i-logo")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+                    .clipShape(/*@START_MENU_TOKEN@*/Circle()/*@END_MENU_TOKEN@*/)
+            }
+            Link(destination: URL(string: "https://twitter.com/otabuzzman")!) {
+                Image("twitter-logo")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+            }
+            Link(destination: URL(string: "https://github.com/otabuzzman/SpeedMetal.git")!) {
+                Image("github-mark-white")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+            }
+        }
+        .padding(24)
     }
 }
