@@ -71,33 +71,13 @@ struct SpeedMetal: App {
         WindowGroup {
             ZStack(alignment: .topLeading) {
                 SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, noMetal3Hint: $noMetal3Hint, noMetal3Show: $noMetal3Show)
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Ausführungszeiten (ms)")
-                        Text("GPU (3 Command Buffer)")
-                        Text("Renderer.draw Funktion")
-                    }
-                    .padding(.trailing, 24)
-                    VStack {
-                        Text("\u{03a3}")
-                        Text(String(format: "%d", Int(rendererTimes.commandBufferSum * 1000)))
-                        Text(String(format: "%d", Int(rendererTimes.drawFunctionSum * 1000)))
-                    }
-                    .padding(.trailing, 12)
-                    VStack {
-                        Text("\u{2300}")
-                        Text("\(Int(rendererTimes.commandBufferAvg * 1000))")
-                        Text("\(Int(rendererTimes.drawFunctionAvg * 1000))")
-                    }
-                }
-                .font(.system(.headline, design: .monospaced, weight: .regular))
-                .foregroundColor(.gray)
-                .padding(24)
-                RaycerTarget(upscaleFactor: upscaleFactor)
+                DisplayRendererTimes(runtimes: rendererTimes)
+                HighlightRaycerOutput(upscaleFactor: upscaleFactor)
             }
             .alert("Den Metal 3 Upscaler unterstützt dein Device leider nicht.", isPresented: $noMetal3Show) {
                 Button("Schade 😕") {}
             }
+            // flight control panel
             HStack {
                 HStack(spacing: 32) {
                     Button {
@@ -122,7 +102,7 @@ struct SpeedMetal: App {
                 .padding(.trailing, 24)
                 Button {
                     control = .lineUp
-                    lineUp = .oneByOne
+                    lineUp  = .oneByOne
                 } label: {
                     Image(systemName: "square")
                         .resizable()
@@ -131,7 +111,7 @@ struct SpeedMetal: App {
                 .disabled(lineUp == .oneByOne || drawLoopEnabled)
                 Button {
                     control = .lineUp
-                    lineUp = .twoByTwo
+                    lineUp  = .twoByTwo
                 } label: {
                     Image(systemName: "square.grid.2x2")
                         .resizable()
@@ -140,7 +120,7 @@ struct SpeedMetal: App {
                 .disabled(lineUp == .twoByTwo || drawLoopEnabled)
                 Button {
                     control = .lineUp
-                    lineUp = .threeByThree
+                    lineUp  = .threeByThree
                 } label: {
                     Image(systemName: "square.grid.3x3")
                         .resizable()
@@ -150,7 +130,7 @@ struct SpeedMetal: App {
                 HStack(spacing: 32) {
                     Button {
                         control = .upscaleFactor
-                        let factor = upscaleFactor * 2.0
+                        let factor    = upscaleFactor * 2.0
                         upscaleFactor = factor > 8 ? 1.0 : factor
                     } label: {
                         UpscalerIcon()
@@ -161,6 +141,54 @@ struct SpeedMetal: App {
                 .padding(.leading, 24)
             }
             .padding(.bottom, 8)
+        }
+    }
+}
+
+struct DisplayRendererTimes: View {
+    var runtimes: RendererTimes
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Ausführungszeiten (ms)")
+                Text("GPU (3 Command Buffer)")
+                Text("Renderer.draw Funktion")
+            }
+            .padding(.trailing, 24)
+            VStack {
+                Text("\u{03a3}")
+                Text(String(format: "%d", Int(runtimes.commandBufferSum * 1000)))
+                Text(String(format: "%d", Int(runtimes.drawFunctionSum * 1000)))
+            }
+            .padding(.trailing, 12)
+            VStack {
+                Text("\u{2300}")
+                Text("\(Int(runtimes.commandBufferAvg * 1000))")
+                Text("\(Int(runtimes.drawFunctionAvg * 1000))")
+            }
+        }
+        .font(.system(.headline, design: .monospaced, weight: .regular))
+        .foregroundColor(.gray)
+        .padding(24)
+    }
+}
+
+struct HighlightRaycerOutput: View {
+    var upscaleFactor: Float
+
+    var body: some View {
+        GeometryReader { dim in
+            VStack(alignment: .leading) {
+                let upscaleFactor = CGFloat(upscaleFactor)
+                // inversely map upscale factor 2...8 to linewidth 8...2
+                let lineWidth = 8 - upscaleFactor / 8 * 6
+                Spacer()
+                RoundedRectangle(cornerRadius: 8, style: .circular)
+                    .stroke(Color.accentColor.opacity(upscaleFactor > 1 ? 1 : 0), lineWidth: lineWidth)
+                    .offset(x: lineWidth / 2, y: -lineWidth / 2)
+                    .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
+            }
         }
     }
 }
@@ -200,25 +228,6 @@ struct UpscalerIcon: View {
                     .resizable()
                     .frame(width: w / 2.0, height: h / 2.0)
                     .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
-            }
-        }
-    }
-}
-
-struct RaycerTarget: View {
-    var upscaleFactor: Float
-
-    var body: some View {
-        GeometryReader { dim in
-            VStack(alignment: .leading) {
-                let upscaleFactor = CGFloat(upscaleFactor)
-                // inversely map upscale factor 2...8 to linewidth 8...2
-                let lineWidth = 8 - upscaleFactor / 8 * 6
-                Spacer()
-                RoundedRectangle(cornerRadius: 8, style: .circular)
-                    .stroke(Color.accentColor.opacity(upscaleFactor > 1 ? 1 : 0), lineWidth: lineWidth)
-                    .offset(x: lineWidth / 2, y: -lineWidth / 2)
-                    .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
             }
         }
     }
