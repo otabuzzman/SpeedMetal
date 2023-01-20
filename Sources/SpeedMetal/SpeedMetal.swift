@@ -15,14 +15,14 @@ struct SMView: UIViewRepresentable {
     var upscaleFactor: Float
     @Binding var rendererTimes: RendererTimes
     @Binding var drawLoopEnabled: Bool
+    @Binding var noMetal3Hint: Bool
+    @Binding var noMetal3Show: Bool
 
     func makeCoordinator() -> Renderer {
-        guard
-            let device = MTLCreateSystemDefaultDevice(),
-            device.supportsFamily(.metal3)
-        else {
-            fatalError("no Metal 3 capable GPU available")
-        }
+        let device = MTLCreateSystemDefaultDevice()!
+        noMetal3Hint = !device.supportsFamily(.metal3)
+        noMetal3Show = noMetal3Hint
+
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
         return Renderer(stage: stage, enabled: $drawLoopEnabled, times: $rendererTimes, device: device)
     }
@@ -64,11 +64,13 @@ struct SpeedMetal: App {
     @State var upscaleFactor: Float   = 1.0
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
+    @State var noMetal3Hint    = false
+    @State var noMetal3Show    = false
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, noMetal3Hint: $noMetal3Hint, noMetal3Show: $noMetal3Show)
                 HStack {
                     VStack(alignment: .leading) {
                         Text("Ausführungszeiten (ms)")
@@ -92,6 +94,9 @@ struct SpeedMetal: App {
                 .foregroundColor(.gray)
                 .padding(24)
                 RaycerTarget(upscaleFactor: upscaleFactor)
+            }
+            .alert("Den Metal 3 Upscaler unterstützt dein Device leider nicht.", isPresented: $noMetal3Show) {
+                Button("Schade 😕") {}
             }
             HStack {
                 HStack(spacing: 32) {
@@ -151,7 +156,7 @@ struct SpeedMetal: App {
                         UpscalerIcon()
                             .frame(width: 42, height: 42)
                     }
-                    .disabled(drawLoopEnabled)
+                    .disabled(drawLoopEnabled || noMetal3Hint)
                 }
                 .padding(.leading, 24)
             }
