@@ -14,10 +14,10 @@ SpeedMetal erfordert iOS/ iPadOS 16 und einen A13 Prozessor. Die Entwicklung der
 - [SpeedMetal auf TestFlight](https://testflight.apple.com/join/dgoPUBe9)
 
 #### Swift Playgrounds 4 (iPad)
-1. SP4 installieren und neue App öffnen
-2. Vordefinierte Swift-Dateien in neuer App löschen
-3. Swift-Dateien aus Repository in neue App übertragen (copy&paste)
-4. Grafiken aus Repository mit SP4 in neuer App hinzufügen (_Insert from..._)
+1. Neue App in SP4 öffnen
+2. Vordefinierte Swift-Dateienlöschen
+3. Swift-Dateien aus Repositoryübertragen (copy&paste)
+4. Grafiken aus Repository hinzufügen(Insert from...)
 5. App in SP4 editieren (optional) und ausführen
 
 ### Links
