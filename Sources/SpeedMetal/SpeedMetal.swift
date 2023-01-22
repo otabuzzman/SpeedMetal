@@ -232,7 +232,7 @@ struct SocialMediaPanel: View {
         HStack( spacing: 12) {
             Spacer()
             Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
-                Image("mac&i-logo")
+                Image("mac_and_i-logo")
                     .resizable()
                     .frame(width: 42, height: 42)
                     .clipShape(/*@START_MENU_TOKEN@*/Circle()/*@END_MENU_TOKEN@*/)
