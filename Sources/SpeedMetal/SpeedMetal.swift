@@ -96,6 +96,7 @@ struct NoMetal3Comforter: View {
                     .aspectRatio(contentMode: .fit)
                 if isPresented {
                     NoMetal3Clue(isPresented: $isPresented)
+                        .padding()
                 }
             }
         }
@@ -110,24 +111,21 @@ struct NoMetal3Clue: View {
     var body: some View {
         VStack {
             Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
-                .frame(maxWidth: 400)
                 .multilineTextAlignment(.center)
             Text("Du siehst einen Screenshot der Szene mit 100+ Frames. Der Upscaler hat das umrahmte Renderergebnis des Raytracers mit Faktor 2 auf Displayformat vergrößert.")
-                .font(.system(size: 20, design: .rounded))
-                .frame(maxWidth: 350)
+                .font(.system(.title3))
                 .padding(.top, 1)
                 .padding(.bottom, 16)
             Button("OK") {
                 isPresented = false
             }
-                .padding()
-                .foregroundColor(.gray)
-                .background(Color.accentColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding()
+            .background(Color.accentColor)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .padding()
-        .foregroundColor(.accentColor)
-        .background(.black.opacity(0.82))
+        .foregroundColor(.gray)
+        .background(.black.opacity(0.8))
         .font(.system(.title, design: .rounded))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
@@ -209,9 +207,9 @@ struct MoreFramesIcon: View {
 
 struct UpscalerIcon: View {
     var body: some View {
-        GeometryReader { geometry in
-            let w = geometry.size.width
-            let h = geometry.size.height
+        GeometryReader { dim in
+            let w = dim.size.width
+            let h = dim.size.height
             ZStack(alignment: .bottomLeading) {
                 Image(systemName: "square")
                     .resizable()
