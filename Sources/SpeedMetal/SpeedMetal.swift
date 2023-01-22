@@ -95,39 +95,31 @@ struct NoMetal3Comforter: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                 if isPresented {
-                    NoMetal3Clue(isPresented: $isPresented)
+                    VStack {
+                        Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
+                            .multilineTextAlignment(.center)
+                        Text("Du siehst einen Screenshot der Szene mit 100+ Frames. Der Upscaler hat das umrahmte Renderergebnis des Raytracers mit Faktor 2 auf Displayformat vergrößert.")
+                            .font(.system(.title3))
+                            .padding(.top, 1)
+                            .padding(.bottom, 16)
+                        Button("OK") {
+                            isPresented = false
+                        }
                         .padding()
+                        .background(Color.accentColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .font(.system(.title, design: .rounded))
+                    .foregroundColor(.gray)
+                    .padding()
+                    .background(.black.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding()
                 }
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .background(.black)
-    }
-}
-
-struct NoMetal3Clue: View {
-    @Binding var isPresented: Bool
-
-    var body: some View {
-        VStack {
-            Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
-                .multilineTextAlignment(.center)
-            Text("Du siehst einen Screenshot der Szene mit 100+ Frames. Der Upscaler hat das umrahmte Renderergebnis des Raytracers mit Faktor 2 auf Displayformat vergrößert.")
-                .font(.system(.title3))
-                .padding(.top, 1)
-                .padding(.bottom, 16)
-            Button("OK") {
-                isPresented = false
-            }
-            .padding()
-            .background(Color.accentColor)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .padding()
-        .foregroundColor(.gray)
-        .background(.black.opacity(0.8))
-        .font(.system(.title, design: .rounded))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
