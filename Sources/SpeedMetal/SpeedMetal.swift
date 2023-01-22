@@ -15,14 +15,9 @@ struct SMView: UIViewRepresentable {
     var upscaleFactor: Float
     @Binding var rendererTimes: RendererTimes
     @Binding var drawLoopEnabled: Bool
-    @Binding var noMetal3Hint: Bool
-    @Binding var noMetal3Show: Bool
+    var device: MTLDevice
 
     func makeCoordinator() -> Renderer {
-        let device = MTLCreateSystemDefaultDevice()!
-        noMetal3Hint = !device.supportsFamily(.metal3)
-        noMetal3Show = noMetal3Hint
-
         let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
         return Renderer(stage: stage, enabled: $drawLoopEnabled, times: $rendererTimes, device: device)
     }
@@ -64,120 +59,77 @@ struct SpeedMetal: App {
     @State var upscaleFactor: Float   = 1.0
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
-    @State var noMetal3Hint    = false
-    @State var noMetal3Show    = false
+
+    private var device: MTLDevice!
+    private var noMetal3: Bool
+
+    init() {
+        device   = MTLCreateSystemDefaultDevice()
+        noMetal3 = !device.supportsFamily(.metal3)
+    }
 
     var body: some Scene {
         WindowGroup {
             ZStack(alignment: .topLeading) {
-                SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, noMetal3Hint: $noMetal3Hint, noMetal3Show: $noMetal3Show)
-                DisplayRendererTimes(runtimes: rendererTimes)
-                HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                Contact()
+                if noMetal3 {
+                    NoMetal3Comforter()
+                } else {
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, device: device)
+                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                    RendererTimesPanel(rendererTimes: rendererTimes)
+                }
+                SocialMediaPanel()
             }
-            .alert("Den Metal 3 Upscaler unterstützt dein Device leider nicht.", isPresented: $noMetal3Show) {
-                Button("Schade 😕") {}
-            }
-            // flight control panel
-            HStack {
-                HStack(spacing: 32) {
-                    Button {
-                        control = .framesToRender
-                        framesToRender += 1
-                    } label: {
-                        MoreFramesIcon(label: 1)
-                    }
-                    Button {
-                        control = .framesToRender
-                        framesToRender += 10
-                    } label: {
-                        MoreFramesIcon(label: 10)
-                    }
-                    Button {
-                        control = .framesToRender
-                        framesToRender += 100
-                    } label: {
-                        MoreFramesIcon(label: 100)
-                    }
-                }
-                .padding(.trailing, 24)
-                Button {
-                    control = .lineUp
-                    lineUp  = .oneByOne
-                } label: {
-                    Image(systemName: "square")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                .disabled(lineUp == .oneByOne || drawLoopEnabled)
-                Button {
-                    control = .lineUp
-                    lineUp  = .twoByTwo
-                } label: {
-                    Image(systemName: "square.grid.2x2")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                .disabled(lineUp == .twoByTwo || drawLoopEnabled)
-                Button {
-                    control = .lineUp
-                    lineUp  = .threeByThree
-                } label: {
-                    Image(systemName: "square.grid.3x3")
-                        .resizable()
-                        .frame(width: 42, height: 42)
-                }
-                .disabled(lineUp == .threeByThree || drawLoopEnabled)
-                HStack(spacing: 32) {
-                    Button {
-                        control = .upscaleFactor
-                        let factor    = upscaleFactor * 2.0
-                        upscaleFactor = factor > 8 ? 1.0 : factor
-                    } label: {
-                        UpscalerIcon()
-                            .frame(width: 42, height: 42)
-                    }
-                    .disabled(drawLoopEnabled || noMetal3Hint)
-                }
-                .padding(.leading, 24)
-            }
-            .padding(.bottom, 8)
+            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3)
         }
     }
 }
 
-struct DisplayRendererTimes: View {
-    var runtimes: RendererTimes
+struct NoMetal3Comforter: View {
+    @State var isPresented = true
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text("Ausführungszeiten (ms)")
-                    .padding(.bottom, 2)
-                    .fontWeight(.bold)
-                Text("GPU (3 Command Buffer)")
-                Text("Renderer.draw Funktion")
-            }
-            .padding(.trailing, 24)
-            VStack {
-                Text("\u{03a3}")
-                    .padding(.bottom, 2)
-                    .fontWeight(.bold)
-                Text(String(format: "%d", Int(runtimes.commandBufferSum * 1000)))
-                Text(String(format: "%d", Int(runtimes.drawFunctionSum * 1000)))
-            }
-            .padding(.trailing, 12)
-            VStack {
-                Text("\u{2300}")
-                    .padding(.bottom, 2)
-                    .fontWeight(.bold)
-                Text("\(Int(runtimes.commandBufferAvg * 1000))")
-                Text("\(Int(runtimes.drawFunctionAvg * 1000))")
+        VStack {
+            ZStack {
+                Image("smview-ipad")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                if isPresented {
+                    NoMetal3Clue(isPresented: $isPresented)
+                }
             }
         }
-        .font(.system(.headline, design: .monospaced, weight: .regular))
-        .foregroundColor(.gray)
-        .padding(24)
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .background(.black)
+    }
+}
+
+struct NoMetal3Clue: View {
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack {
+            Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
+                .frame(maxWidth: 400)
+                .multilineTextAlignment(.center)
+            Text("Du siehst einen Screenshot der Szene mit 100+ Frames. Der Upscaler hat das umrahmte Renderergebnis des Raytracers mit Faktor 2 auf Displayformat vergrößert.")
+                .font(.system(size: 20, design: .rounded))
+                .frame(maxWidth: 350)
+                .padding(.top, 1)
+                .padding(.bottom, 16)
+            Button("OK") {
+                isPresented = false
+            }
+                .padding()
+                .foregroundColor(.gray)
+                .background(Color.accentColor)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .padding()
+        .foregroundColor(.accentColor)
+        .background(.black.opacity(0.82))
+        .font(.system(.title, design: .rounded))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -197,6 +149,41 @@ struct HighlightRaycerOutput: View {
                     .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
             }
         }
+    }
+}
+
+struct RendererTimesPanel: View {
+    var rendererTimes: RendererTimes
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Ausführungszeiten (ms)")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
+                Text("GPU (3 Command Buffer)")
+                Text("Renderer.draw Funktion")
+            }
+            .padding(.trailing, 24)
+            VStack {
+                Text("\u{03a3}")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
+                Text(String(format: "%d", Int(rendererTimes.commandBufferSum * 1000)))
+                Text(String(format: "%d", Int(rendererTimes.drawFunctionSum * 1000)))
+            }
+            .padding(.trailing, 12)
+            VStack {
+                Text("\u{2300}")
+                    .padding(.bottom, 2)
+                    .fontWeight(.bold)
+                Text("\(Int(rendererTimes.commandBufferAvg * 1000))")
+                Text("\(Int(rendererTimes.drawFunctionAvg * 1000))")
+            }
+        }
+        .font(.system(.headline, design: .monospaced, weight: .regular))
+        .foregroundColor(.gray)
+        .padding(24)
     }
 }
 
@@ -240,7 +227,7 @@ struct UpscalerIcon: View {
     }
 }
 
-struct Contact: View {
+struct SocialMediaPanel: View {
     var body: some View {
         HStack( spacing: 12) {
             Spacer()
@@ -250,7 +237,7 @@ struct Contact: View {
                     .frame(width: 42, height: 42)
                     .clipShape(/*@START_MENU_TOKEN@*/Circle()/*@END_MENU_TOKEN@*/)
             }
-            Link(destination: URL(string: "https://twitter.com/otabuzzman")!) {
+            Link(destination: URL(string: "https://twitter.com/mac_and_i")!) {
                 Image("twitter-logo")
                     .resizable()
                     .frame(width: 42, height: 42)
@@ -262,5 +249,81 @@ struct Contact: View {
             }
         }
         .padding(24)
+    }
+}
+
+struct FlightControlPanel: View {
+    @Binding var control: SMViewControl
+    @Binding var lineUp: LineUp
+    @Binding var framesToRender: UInt32
+    @Binding var upscaleFactor: Float
+    var drawLoopEnabled: Bool
+    var noMetal3: Bool
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 32) {
+                Button {
+                    control = .framesToRender
+                    framesToRender += 1
+                } label: {
+                    MoreFramesIcon(label: 1)
+                }
+                Button {
+                    control = .framesToRender
+                    framesToRender += 10
+                } label: {
+                    MoreFramesIcon(label: 10)
+                }
+                Button {
+                    control = .framesToRender
+                    framesToRender += 100
+                } label: {
+                    MoreFramesIcon(label: 100)
+                }
+            }
+            .padding(.trailing, 24)
+            Button {
+                control = .lineUp
+                lineUp  = .oneByOne
+            } label: {
+                Image(systemName: "square")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+            }
+            .disabled(lineUp == .oneByOne || drawLoopEnabled)
+            Button {
+                control = .lineUp
+                lineUp  = .twoByTwo
+            } label: {
+                Image(systemName: "square.grid.2x2")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+            }
+            .disabled(lineUp == .twoByTwo || drawLoopEnabled)
+            Button {
+                control = .lineUp
+                lineUp  = .threeByThree
+            } label: {
+                Image(systemName: "square.grid.3x3")
+                    .resizable()
+                    .frame(width: 42, height: 42)
+            }
+            .disabled(lineUp == .threeByThree || drawLoopEnabled)
+            HStack(spacing: 32) {
+                Button {
+                    control = .upscaleFactor
+                    let factor    = upscaleFactor * 2.0
+                    upscaleFactor = factor > 8 ? 1.0 : factor
+                } label: {
+                    UpscalerIcon()
+                        .frame(width: 42, height: 42)
+                }
+                .disabled(drawLoopEnabled)
+            }
+            .padding(.leading, 24)
+        }
+        .padding(.bottom, 8)
+        .disabled(noMetal3)
     }
 }
