@@ -1,4 +1,5 @@
 import MetalKit
+import MetalFX
 import SwiftUI
 
 enum SMViewControl {
@@ -53,8 +54,6 @@ struct SMView: UIViewRepresentable {
 
 @main
 struct SpeedMetal: App {
-    @UIApplicationDelegateAdaptor private var speedMetalDelegate: SpeedMetalDelegate
-
     @State var control = SMViewControl.none
     @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
@@ -62,18 +61,16 @@ struct SpeedMetal: App {
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
 
-    private var device:     MTLDevice
+    private var device: MTLDevice
     private var noMetal3:   Bool
     private var noUpscaler: Bool
 
     init() {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
-        device   = MTLCreateSystemDefaultDevice()!
-        noMetal3 = !device.supportsFamily(.metal3)
-
-        let descriptor = MTLFXSpatialScalerDescriptor()
-        noUpscaler     = !descriptor.supportsDevice(device)
+        device = MTLCreateSystemDefaultDevice()!
+        noMetal3   = !device.supportsFamily(.metal3)
+        noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
     var body: some Scene {
@@ -81,10 +78,6 @@ struct SpeedMetal: App {
             ZStack(alignment: .topLeading) {
                 if noMetal3 {
                     NoMetal3Comforter()
-                        .onAppear() { // https://stackoverflow.com/a/66126192
-                            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
-                            SpeedMetalDelegate.orientation = .portrait
-                        }
                 } else {
                     SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, device: device)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
@@ -92,16 +85,8 @@ struct SpeedMetal: App {
                 }
                 SocialMediaPanel()
             }
-            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3)
+            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3, noUpscaler: noUpscaler)
         }
-    }
-}
-
-class SpeedMetalDelegate: NSObject, UIApplicationDelegate {
-    static var orientation = UIInterfaceOrientationMask.all
-
-    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-        return SpeedMetalDelegate.orientation
     }
 }
 
@@ -269,6 +254,7 @@ struct FlightControlPanel: View {
     @Binding var upscaleFactor: Float
     var drawLoopEnabled: Bool
     var noMetal3: Bool
+    var noUpscaler: Bool
 
     var body: some View {
         HStack {
