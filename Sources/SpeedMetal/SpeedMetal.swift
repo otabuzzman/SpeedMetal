@@ -54,13 +54,13 @@ struct SMView: UIViewRepresentable {
 
 @main
 struct SpeedMetal: App {
-    @State var control = SMViewControl.none
-    @State var lineUp  = LineUp.threeByThree
-    @State var framesToRender: UInt32 = 1
-    @State var upscaleFactor: Float   = 1.0
-    @State var rendererTimes   = RendererTimes()
-    @State var drawLoopEnabled = true
-
+    @State private var control = SMViewControl.none
+    @State private var lineUp  = LineUp.threeByThree
+    @State private var framesToRender: UInt32 = 1
+    @State private var upscaleFactor: Float   = 1.0
+    @State private var rendererTimes   = RendererTimes()
+    @State private var drawLoopEnabled = true
+    
     private var device: MTLDevice
     private var noMetal3:   Bool
     private var noUpscaler: Bool
@@ -75,6 +75,15 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
+            HStack {
+                Text("SpeedMetal")
+                    .font(.system(size: 36, weight: .semibold, design: .rounded))
+                    .foregroundColor(.gray)
+                    .padding()
+                Spacer()
+                SocialMediaPanel()
+            }
+            .background(.black)
             ZStack(alignment: .topLeading) {
                 if noMetal3 {
                     NoMetal3Comforter()
@@ -83,7 +92,6 @@ struct SpeedMetal: App {
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                     RendererTimesPanel(rendererTimes: rendererTimes)
                 }
-                SocialMediaPanel()
             }
             FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3, noUpscaler: noUpscaler)
         }
@@ -91,7 +99,7 @@ struct SpeedMetal: App {
 }
 
 struct NoMetal3Comforter: View {
-    @State var isPresented = true
+    @State private var isPresented = true
 
     var body: some View {
         VStack {
@@ -225,7 +233,6 @@ struct UpscalerIcon: View {
 struct SocialMediaPanel: View {
     var body: some View {
         HStack( spacing: 12) {
-            Spacer()
             Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
                 Image("mac_and_i-logo")
                     .resizable()
