@@ -53,6 +53,8 @@ struct SMView: UIViewRepresentable {
 
 @main
 struct SpeedMetal: App {
+    @UIApplicationDelegateAdaptor private var speedMetalDelegate: SpeedMetalDelegate
+
     @State var control = SMViewControl.none
     @State var lineUp  = LineUp.threeByThree
     @State var framesToRender: UInt32 = 1
@@ -60,12 +62,18 @@ struct SpeedMetal: App {
     @State var rendererTimes   = RendererTimes()
     @State var drawLoopEnabled = true
 
-    private var device: MTLDevice!
-    private var noMetal3: Bool
+    private var device:     MTLDevice
+    private var noMetal3:   Bool
+    private var noUpscaler: Bool
 
     init() {
-        device   = MTLCreateSystemDefaultDevice()
+        // should work safely on modern devices
+        // and in simulator from Xcode 11 onwards
+        device   = MTLCreateSystemDefaultDevice()!
         noMetal3 = !device.supportsFamily(.metal3)
+
+        let descriptor = MTLFXSpatialScalerDescriptor()
+        noUpscaler     = !descriptor.supportsDevice(device)
     }
 
     var body: some Scene {
@@ -73,6 +81,10 @@ struct SpeedMetal: App {
             ZStack(alignment: .topLeading) {
                 if noMetal3 {
                     NoMetal3Comforter()
+                        .onAppear() { // https://stackoverflow.com/a/66126192
+                            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+                            SpeedMetalDelegate.orientation = .portrait
+                        }
                 } else {
                     SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, device: device)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
@@ -82,6 +94,14 @@ struct SpeedMetal: App {
             }
             FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3)
         }
+    }
+}
+
+class SpeedMetalDelegate: NSObject, UIApplicationDelegate {
+    static var orientation = UIInterfaceOrientationMask.all
+
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        return SpeedMetalDelegate.orientation
     }
 }
 
@@ -98,7 +118,7 @@ struct NoMetal3Comforter: View {
                     VStack {
                         Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
                             .multilineTextAlignment(.center)
-                        Text("Du siehst einen Screenshot der Szene mit 100+ Frames. Der Upscaler hat das umrahmte Renderergebnis des Raytracers mit Faktor 2 auf Displayformat vergrößert.")
+                        Text("Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 mit 100+ Frames gerendert. Dabei hat der Upscaler den umrahmten Output des Raytracers auf Displaygröße verdoppelt.")
                             .font(.system(.title3))
                             .padding(.top, 1)
                             .padding(.bottom, 16)
@@ -309,7 +329,7 @@ struct FlightControlPanel: View {
                     UpscalerIcon()
                         .frame(width: 42, height: 42)
                 }
-                .disabled(drawLoopEnabled)
+                .disabled(noUpscaler || drawLoopEnabled)
             }
             .padding(.leading, 24)
         }

@@ -17,7 +17,7 @@ class Renderer: NSObject {
     // options
     var stage: Stage!                { didSet { resetStage() } }
     var framesToRender: UInt32 = 1   { didSet { enabled = true } }
-    var usePerPrimitiveData    = false
+    var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
     private var frameWidth: Int    = 0
@@ -38,7 +38,7 @@ class Renderer: NSObject {
     private let alignedUniformsSize  = (MemoryLayout<Uniforms>.stride + 255) & ~255
 
     private var resourceBuffer:  MTLBuffer!
-    private var resourcesStride: UInt32  = 0
+    private var resourcesStride: UInt32 = 0
 
     private var instanceBuffer: MTLBuffer!
 
@@ -59,8 +59,8 @@ class Renderer: NSObject {
 
     private var commandBufferSum: TimeInterval = 0
     private var commandBufferAvg: TimeInterval = 0
-    private var drawFunctionSum: TimeInterval = 0
-    private var drawFunctionAvg: TimeInterval = 0
+    private var drawFunctionSum: TimeInterval  = 0
+    private var drawFunctionAvg: TimeInterval  = 0
 
     @Binding private var enabled: Bool
     @Binding private var times:   RendererTimes
