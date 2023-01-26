@@ -16,10 +16,10 @@ struct SMView: UIViewRepresentable {
     var upscaleFactor: Float
     @Binding var rendererTimes: RendererTimes
     @Binding var drawLoopEnabled: Bool
-    var device: MTLDevice
 
     func makeCoordinator() -> Renderer {
-        let stage = Stage.hoistCornellBox(lineUp: lineUp, device: device)
+        let device = MTLCreateSystemDefaultDevice()!
+        let stage  = Stage.hoistCornellBox(lineUp: lineUp, device: device)
         return Renderer(stage: stage, enabled: $drawLoopEnabled, times: $rendererTimes, device: device)
     }
 
@@ -60,15 +60,14 @@ struct SpeedMetal: App {
     @State private var upscaleFactor: Float   = 1.0
     @State private var rendererTimes   = RendererTimes()
     @State private var drawLoopEnabled = true
-    
-    private var device: MTLDevice
+
     private var noMetal3:   Bool
     private var noUpscaler: Bool
 
     init() {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
-        device = MTLCreateSystemDefaultDevice()!
+        let device = MTLCreateSystemDefaultDevice()!
         noMetal3   = !device.supportsFamily(.metal3)
         noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
@@ -76,24 +75,48 @@ struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             HStack {
+                Spacer()
                 Text("SpeedMetal")
                     .font(.system(size: 36, weight: .semibold, design: .rounded))
                     .foregroundColor(.gray)
-                    .padding()
-                Spacer()
                 SocialMediaPanel()
             }
             .background(.black)
+            RendererTimesPanel(rendererTimes: rendererTimes)
             ZStack(alignment: .topLeading) {
                 if noMetal3 {
                     NoMetal3Comforter()
                 } else {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled, device: device)
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                    RendererTimesPanel(rendererTimes: rendererTimes)
                 }
             }
-            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noMetal3: noMetal3, noUpscaler: noUpscaler)
+            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
+                .disabled(noMetal3)
+
+        }
+    }
+}
+
+struct SocialMediaPanel: View {
+    var body: some View {
+        HStack {
+            Group {
+                Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
+                    Image("mac_and_i-logo")
+                        .resizable()
+                        .clipShape(Circle())
+                }
+                Link(destination: URL(string: "https://twitter.com/mac_and_i")!) {
+                    Image("twitter-logo")
+                        .resizable()
+                }
+                Link(destination: URL(string: "https://github.com/otabuzzman/SpeedMetal.git")!) {
+                    Image("github-mark-white")
+                        .resizable()
+                }
+            }
+            .frame(width: 42, height: 42)
         }
     }
 }
@@ -109,25 +132,21 @@ struct NoMetal3Comforter: View {
                     .aspectRatio(contentMode: .fit)
                 if isPresented {
                     VStack {
-                        Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.")
-                            .multilineTextAlignment(.center)
-                        Text("Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 mit 100+ Frames gerendert. Dabei hat der Upscaler den umrahmten Output des Raytracers auf Displaygröße verdoppelt.")
-                            .font(.system(.title3))
-                            .padding(.top, 1)
-                            .padding(.bottom, 16)
-                        Button("OK") {
-                            isPresented = false
+                        Group {
+                            Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht. Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 gerendert und dabei den umrahmten Output des Raytracers mit dem Upscaler um Faktor 2 vergrößert.")
+                            Button("OK") {
+                                isPresented = false
+                            }
+                            .padding()
+                            .background(Color.accentColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .padding()
-                        .background(Color.accentColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .font(.system(.title3, design: .rounded))
+                        .foregroundColor(.gray)
                     }
-                    .font(.system(.title, design: .rounded))
-                    .foregroundColor(.gray)
                     .padding()
                     .background(.black.opacity(0.8))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding()
                 }
             }
         }
@@ -167,15 +186,13 @@ struct RendererTimesPanel: View {
                 Text("GPU (3 Command Buffer)")
                 Text("Renderer.draw Funktion")
             }
-            .padding(.trailing, 24)
             VStack {
                 Text("\u{03a3}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text(String(format: "%d", Int(rendererTimes.commandBufferSum * 1000)))
-                Text(String(format: "%d", Int(rendererTimes.drawFunctionSum * 1000)))
+                Text("\(Int(rendererTimes.commandBufferSum * 1000))")
+                Text("\(Int(rendererTimes.drawFunctionSum * 1000))")
             }
-            .padding(.trailing, 12)
             VStack {
                 Text("\u{2300}")
                     .padding(.bottom, 2)
@@ -186,71 +203,6 @@ struct RendererTimesPanel: View {
         }
         .font(.system(.headline, design: .monospaced, weight: .regular))
         .foregroundColor(.gray)
-        .padding(24)
-    }
-}
-
-struct MoreFramesIcon: View {
-    var label: UInt
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Image(systemName: "play")
-                .resizable()
-                .frame(width: 24, height: 24)
-            Text("|")
-                .font(.system(size: 26, weight: .medium, design: .rounded))
-                .offset(x: 0, y: -2.4)
-            Text("\(label)")
-                .font(.system(size: 20, weight: .medium, design: .rounded))
-            Text("|")
-                .font(.system(size: 26, weight: .medium, design: .rounded))
-                .offset(x: 0, y: -2.4)
-        }
-    }
-}
-
-struct UpscalerIcon: View {
-    var body: some View {
-        GeometryReader { dim in
-            let w = dim.size.width
-            let h = dim.size.height
-            ZStack(alignment: .bottomLeading) {
-                Image(systemName: "square")
-                    .resizable()
-                Image(systemName: "square.fill")
-                    .resizable()
-                    .frame(width: w / 2.0, height: h / 2.0)
-                Image(systemName: "arrow.up.right")
-                    .resizable()
-                    .frame(width: w / 2.0, height: h / 2.0)
-                    .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
-            }
-        }
-    }
-}
-
-struct SocialMediaPanel: View {
-    var body: some View {
-        HStack( spacing: 12) {
-            Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
-                Image("mac_and_i-logo")
-                    .resizable()
-                    .frame(width: 42, height: 42)
-                    .clipShape(/*@START_MENU_TOKEN@*/Circle()/*@END_MENU_TOKEN@*/)
-            }
-            Link(destination: URL(string: "https://twitter.com/mac_and_i")!) {
-                Image("twitter-logo")
-                    .resizable()
-                    .frame(width: 42, height: 42)
-            }
-            Link(destination: URL(string: "https://github.com/otabuzzman/SpeedMetal.git")!) {
-                Image("github-mark-white")
-                    .resizable()
-                    .frame(width: 42, height: 42)
-            }
-        }
-        .padding(24)
     }
 }
 
@@ -260,32 +212,36 @@ struct FlightControlPanel: View {
     @Binding var framesToRender: UInt32
     @Binding var upscaleFactor: Float
     var drawLoopEnabled: Bool
-    var noMetal3: Bool
     var noUpscaler: Bool
 
     var body: some View {
         HStack {
-            HStack(spacing: 32) {
+            HStack {
                 Button {
                     control = .framesToRender
-                    framesToRender += 1
+                    framesToRender += 5
                 } label: {
-                    MoreFramesIcon(label: 1)
+                    Image(systemName: "goforward.5")
+                        .resizable()
+                        .frame(width: 42, height: 42)
                 }
                 Button {
                     control = .framesToRender
-                    framesToRender += 10
+                    framesToRender += 45
                 } label: {
-                    MoreFramesIcon(label: 10)
+                    Image(systemName: "goforward.45")
+                        .resizable()
+                        .frame(width: 42, height: 42)
                 }
                 Button {
                     control = .framesToRender
-                    framesToRender += 100
+                    framesToRender += 90
                 } label: {
-                    MoreFramesIcon(label: 100)
+                    Image(systemName: "goforward.90")
+                        .resizable()
+                        .frame(width: 42, height: 42)
                 }
             }
-            .padding(.trailing, 24)
             Button {
                 control = .lineUp
                 lineUp  = .oneByOne
@@ -313,7 +269,7 @@ struct FlightControlPanel: View {
                     .frame(width: 42, height: 42)
             }
             .disabled(lineUp == .threeByThree || drawLoopEnabled)
-            HStack(spacing: 32) {
+            HStack {
                 Button {
                     control = .upscaleFactor
                     let factor    = upscaleFactor * 2.0
@@ -324,9 +280,26 @@ struct FlightControlPanel: View {
                 }
                 .disabled(noUpscaler || drawLoopEnabled)
             }
-            .padding(.leading, 24)
         }
-        .padding(.bottom, 8)
-        .disabled(noMetal3)
+    }
+}
+
+struct UpscalerIcon: View {
+    var body: some View {
+        GeometryReader { dim in
+            let w = dim.size.width
+            let h = dim.size.height
+            ZStack(alignment: .bottomLeading) {
+                Image(systemName: "square")
+                    .resizable()
+                Image(systemName: "square.fill")
+                    .resizable()
+                    .frame(width: w / 2.0, height: h / 2.0)
+                Image(systemName: "arrow.up.right")
+                    .resizable()
+                    .frame(width: w / 2.0, height: h / 2.0)
+                    .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
+            }
+        }
     }
 }
