@@ -136,14 +136,19 @@ struct SocialMediaHeader: View {
 struct RendererTimesPanel: View {
     var rendererTimes: RendererTimes
 
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("Ausführungszeiten (ms)")
+                Text("Ausführungszeiten (ms)  ")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text("GPU (3 Command Buffer)")
-                Text("Renderer.draw Funktion")
+                Text("GPU (3 Command Buffer) :")
+                Text("Renderer.draw Funktion :")
             }
             VStack {
                 Text("\u{03a3}")
@@ -160,7 +165,7 @@ struct RendererTimesPanel: View {
                 Text("\(Int(rendererTimes.drawFunctionAvg * 1000))")
             }
         }
-        .font(.system(.headline, design: .monospaced, weight: .regular))
+        .font(.system(isRegular ? .title3 : .headline, design: .monospaced, weight: .regular))
         .foregroundColor(.gray)
     }
 }
@@ -302,5 +307,46 @@ struct UpscalerIcon: View {
                     .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
             }
         }
+    }
+}
+
+// experimental starts here
+struct AStack<Content: View>: View {
+    private var content: () -> Content
+
+    @Environment(\.verticalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    var body: some View {
+        Group {
+            if isRegular {
+                VStack(content: content)
+            } else {
+                HStack(content: content)
+            }
+        }
+    }
+}
+
+struct OnRotate: ViewModifier {
+    let action: (UIDeviceOrientation) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { orientation in
+                action(UIDevice.current.orientation)
+            }
+    }
+}
+
+extension View {
+    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
+        self.modifier(OnRotate(action: action))
     }
 }
