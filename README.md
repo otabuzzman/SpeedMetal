@@ -2,7 +2,7 @@
 
 Das Repository enthält die Sourcen der App zum Developer's Corner Artikel _Speed Metal_ im Apple-Magazin [Mac & i Heft X/2023, S. X](). Die App basiert auf der Codebase [Accelerating ray tracing using Metal](https://developer.apple.com/documentation/metal/metal_sample_code_library/accelerating_ray_tracing_using_metal), die Apple für die WWDC 2022 um einige Features des neuen [Metal 3](https://developer.apple.com/metal/) erweitert hat. Das Original ist in Objective-C für UIKit geschrieben, die App für den Artikel ist nach Swift portiert und für SwiftUI.
 
-Nach dem Start rendert SpeedMetal das erste Frame einer Szene mit neun Cornell Boxen. Am unteren Bildrand gibt es einige Controls: die ersten drei Buttons (von links) rendern das nächste Frame, die nächsten zehn beziehungsweise die nächsten hundert Frames. Es folgen drei Buttons für Szenen mit einer, vier und neun Cornell Boxen. Der Button ganz rechts aktiviert den Upscaler, der das Renderergebnis mit jedem Tap um den Faktor zwei vergrößert. Bei einem Wert von acht beginnt der Zyklus mit dem nächsten Tap von vorne.
+Nach dem Start rendert SpeedMetal das erste Frame einer Szene mit neun Cornell Boxen. Am unteren Bildrand gibt es einige Controls: die ersten drei Buttons (von links) rendern die nächsten 5, 45 beziehungsweise die 90 Frames. Es folgen drei Buttons für Szenen mit einer, vier und neun Cornell Boxen. Der Button ganz rechts aktiviert gegebenenfalls den Upscaler, der das Renderergebnis mit jedem Tap um den Faktor zwei vergrößert. Bei einem Wert von acht beginnt der Zyklus mit dem nächsten Tap von vorne.
 
 Am oberen Bildrand aktualisiert die App die Laufzeit der Kommandos im Command Buffer, den SpeedMetal für jedes Frame ausführt.
 
