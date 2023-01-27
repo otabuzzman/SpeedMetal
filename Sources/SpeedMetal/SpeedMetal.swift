@@ -68,26 +68,31 @@ struct SpeedMetal: App {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
         let device = MTLCreateSystemDefaultDevice()!
-        noMetal3   = !device.supportsFamily(.metal3)
+        noMetal3   = device.supportsFamily(.metal3)
         noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
     var body: some Scene {
         WindowGroup {
-            SocialMediaHeader(title: "SpeedMetal")
-
-            if noMetal3 {
-                NoMetal3Comfort()
-            } else {
+            VStack {
+                SocialMediaHeader(title: "SpeedMetal")
+                    .padding()
                 RendererTimesPanel(rendererTimes: rendererTimes)
-                ZStack {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
-                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                   }
+
+                if noMetal3 {
+                    NoMetal3Comfort()
+                } else {
+                    ZStack {
+                        SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                        HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                    }
+                }
             }
+            .background(.black)
 
             FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
-                    .disabled(noMetal3)
+                .padding()
+                .disabled(noMetal3)
         }
     }
 }
@@ -95,10 +100,16 @@ struct SpeedMetal: App {
 struct SocialMediaHeader: View {
     var title: String
 
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
     var body: some View {
+        let iconSize: CGFloat = isRegular ? 44 : 36
         HStack {
             Text(title)
-                .font(.system(.title, design: .rounded, weight: .semibold))
+                .font(.system(isRegular ? .largeTitle : .title2, design: .rounded, weight: .semibold))
                 .foregroundColor(.gray)
             Spacer()
             Group {
@@ -116,60 +127,7 @@ struct SocialMediaHeader: View {
                         .resizable()
                 }
             }
-            .frame(width: 44, height: 44)
-        }
-    }
-}
-
-struct NoMetal3Comfort: View {
-    @State private var isPresented = true
-
-    var body: some View {
-        VStack {
-            ZStack {
-                Image("smview-ipad")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                if isPresented {
-                    VStack {
-                        Group {
-                            Text("Dein Device unterstützt die neuen Features von Metal 3 leider nicht. Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 gerendert und dabei den umrahmten Output des Raytracers mit dem Upscaler um Faktor 2 vergrößert.")
-                            Button("OK") {
-                                isPresented = false
-                            }
-                            .padding()
-                            .background(Color.accentColor)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .font(.system(.title3, design: .rounded))
-                        .foregroundColor(.gray)
-                    }
-                    .padding()
-                    .background(.black.opacity(0.8))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-        }
-        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-        .background(.black)
-    }
-}
-
-struct HighlightRaycerOutput: View {
-    var upscaleFactor: Float
-
-    var body: some View {
-        GeometryReader { dim in
-            VStack(alignment: .leading) {
-                let upscaleFactor = CGFloat(upscaleFactor)
-                // inversely map upscale factor 2...8 to linewidth 8...2
-                let lineWidth = 8 - upscaleFactor / 8 * 6
-                Spacer()
-                RoundedRectangle(cornerRadius: 8, style: .circular)
-                    .stroke(Color.accentColor.opacity(upscaleFactor > 1 ? 1 : 0), lineWidth: lineWidth)
-                    .offset(x: lineWidth / 2, y: -lineWidth / 2)
-                    .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
-            }
+            .frame(width: iconSize, height: iconSize)
         }
     }
 }
@@ -206,6 +164,46 @@ struct RendererTimesPanel: View {
     }
 }
 
+struct NoMetal3Comfort: View {
+    @State private var isPresented = true
+
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
+    var body: some View {
+        VStack {
+            Image(isRegular ? "smview-regular" : "smview-compact")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .alert("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.", isPresented: $isPresented) {} message: {
+            Text("Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 gerendert und dabei den umrahmten Output des Raytracers mit dem Upscaler um Faktor 2 vergrößert.")
+        }
+    }
+}
+
+struct HighlightRaycerOutput: View {
+    var upscaleFactor: Float
+
+    var body: some View {
+        GeometryReader { dim in
+            VStack(alignment: .leading) {
+                let upscaleFactor = CGFloat(upscaleFactor)
+                // inversely map upscale factor 2...8 to linewidth 8...2
+                let lineWidth = 8 - upscaleFactor / 8 * 6
+                Spacer()
+                RoundedRectangle(cornerRadius: 8, style: .circular)
+                    .stroke(Color.accentColor.opacity(upscaleFactor > 1 ? 1 : 0), lineWidth: lineWidth)
+                    .offset(x: lineWidth / 2, y: -lineWidth / 2)
+                    .frame(width: dim.size.width / upscaleFactor, height: dim.size.height / upscaleFactor)
+            }
+        }
+    }
+}
+
 struct FlightControlPanel: View {
     @Binding var control: SMViewControl
     @Binding var lineUp: LineUp
@@ -214,10 +212,15 @@ struct FlightControlPanel: View {
     var drawLoopEnabled: Bool
     var noUpscaler: Bool
 
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
     var body: some View {
 
         HStack {
-            let iconSize: CGFloat = 44
+            let iconSize: CGFloat = isRegular ? 44 : 36
             HStack {
                 Button {
                     control = .framesToRender
