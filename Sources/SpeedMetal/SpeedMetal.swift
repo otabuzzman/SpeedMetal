@@ -61,8 +61,8 @@ struct SpeedMetal: App {
     @State private var rendererTimes   = RendererTimes()
     @State private var drawLoopEnabled = true
 
-    private var noMetal3:   Bool
-    private var noUpscaler: Bool
+    private var noMetal3   = true
+    private var noUpscaler = false
 
     init() {
         // should work safely on modern devices
@@ -74,33 +74,33 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
-            HStack {
-                Spacer()
-                Text("SpeedMetal")
-                    .font(.system(size: 36, weight: .semibold, design: .rounded))
-                    .foregroundColor(.gray)
-                SocialMediaPanel()
-            }
-            .background(.black)
-            RendererTimesPanel(rendererTimes: rendererTimes)
-            ZStack(alignment: .topLeading) {
-                if noMetal3 {
-                    NoMetal3Comforter()
-                } else {
+            SocialMediaHeader(title: "SpeedMetal")
+
+            if noMetal3 {
+                NoMetal3Comfort()
+            } else {
+                RendererTimesPanel(rendererTimes: rendererTimes)
+                ZStack {
                     SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                }
+                   }
             }
-            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
-                .disabled(noMetal3)
 
+            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
+                    .disabled(noMetal3)
         }
     }
 }
 
-struct SocialMediaPanel: View {
+struct SocialMediaHeader: View {
+    var title: String
+
     var body: some View {
         HStack {
+            Text(title)
+                .font(.system(.title, design: .rounded, weight: .semibold))
+                .foregroundColor(.gray)
+            Spacer()
             Group {
                 Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
                     Image("mac_and_i-logo")
@@ -116,12 +116,12 @@ struct SocialMediaPanel: View {
                         .resizable()
                 }
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 44, height: 44)
         }
     }
 }
 
-struct NoMetal3Comforter: View {
+struct NoMetal3Comfort: View {
     @State private var isPresented = true
 
     var body: some View {
@@ -215,7 +215,9 @@ struct FlightControlPanel: View {
     var noUpscaler: Bool
 
     var body: some View {
+
         HStack {
+            let iconSize: CGFloat = 44
             HStack {
                 Button {
                     control = .framesToRender
@@ -223,7 +225,7 @@ struct FlightControlPanel: View {
                 } label: {
                     Image(systemName: "goforward.5")
                         .resizable()
-                        .frame(width: 42, height: 42)
+                        .frame(width: iconSize, height: iconSize)
                 }
                 Button {
                     control = .framesToRender
@@ -231,7 +233,7 @@ struct FlightControlPanel: View {
                 } label: {
                     Image(systemName: "goforward.45")
                         .resizable()
-                        .frame(width: 42, height: 42)
+                        .frame(width: iconSize, height: iconSize)
                 }
                 Button {
                     control = .framesToRender
@@ -239,7 +241,7 @@ struct FlightControlPanel: View {
                 } label: {
                     Image(systemName: "goforward.90")
                         .resizable()
-                        .frame(width: 42, height: 42)
+                        .frame(width: iconSize, height: iconSize)
                 }
             }
             Button {
@@ -248,7 +250,7 @@ struct FlightControlPanel: View {
             } label: {
                 Image(systemName: "square")
                     .resizable()
-                    .frame(width: 42, height: 42)
+                    .frame(width: iconSize, height: iconSize)
             }
             .disabled(lineUp == .oneByOne || drawLoopEnabled)
             Button {
@@ -257,7 +259,7 @@ struct FlightControlPanel: View {
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .resizable()
-                    .frame(width: 42, height: 42)
+                    .frame(width: iconSize, height: iconSize)
             }
             .disabled(lineUp == .twoByTwo || drawLoopEnabled)
             Button {
@@ -266,7 +268,7 @@ struct FlightControlPanel: View {
             } label: {
                 Image(systemName: "square.grid.3x3")
                     .resizable()
-                    .frame(width: 42, height: 42)
+                    .frame(width: iconSize, height: iconSize)
             }
             .disabled(lineUp == .threeByThree || drawLoopEnabled)
             HStack {
@@ -276,7 +278,7 @@ struct FlightControlPanel: View {
                     upscaleFactor = factor > 8 ? 1.0 : factor
                 } label: {
                     UpscalerIcon()
-                        .frame(width: 42, height: 42)
+                        .frame(width: iconSize, height: iconSize)
                 }
                 .disabled(noUpscaler || drawLoopEnabled)
             }
