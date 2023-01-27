@@ -68,7 +68,7 @@ struct SpeedMetal: App {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
         let device = MTLCreateSystemDefaultDevice()!
-        noMetal3   = device.supportsFamily(.metal3)
+        noMetal3   = !device.supportsFamily(.metal3)
         noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
@@ -78,6 +78,7 @@ struct SpeedMetal: App {
                 SocialMediaHeader(title: "SpeedMetal")
                     .padding()
                 RendererTimesPanel(rendererTimes: rendererTimes)
+                    .padding()
 
                 if noMetal3 {
                     NoMetal3Comfort()
@@ -109,7 +110,7 @@ struct SocialMediaHeader: View {
         let iconSize: CGFloat = isRegular ? 44 : 36
         HStack {
             Text(title)
-                .font(.system(isRegular ? .largeTitle : .title2, design: .rounded, weight: .semibold))
+                .font(.system(isRegular ? .largeTitle : .title, design: .rounded, weight: .semibold))
                 .foregroundColor(.gray)
             Spacer()
             Group {
@@ -167,14 +168,9 @@ struct RendererTimesPanel: View {
 struct NoMetal3Comfort: View {
     @State private var isPresented = true
 
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    private var isRegular: Bool {
-        sizeClass == .regular
-    }
-
     var body: some View {
         VStack {
-            Image(isRegular ? "smview-regular" : "smview-compact")
+            Image("smview-regular")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
         }
