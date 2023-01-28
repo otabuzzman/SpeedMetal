@@ -75,7 +75,7 @@ struct SpeedMetal: App {
     var body: some Scene {
         WindowGroup {
             VStack {
-                SocialMediaHeader(title: "SpeedMetal")
+                SocialMediaHeadline(title: "SpeedMetal")
                     .padding()
                 RendererTimesPanel(rendererTimes: rendererTimes)
                     .padding()
@@ -91,6 +91,25 @@ struct SpeedMetal: App {
             }
             .background(.black)
 
+/*
+            HStack(alignment: .top) {
+                RendererTimesPanel(rendererTimes: rendererTimes)
+                    .padding()
+
+                if noMetal3 {
+                    NoMetal3Comfort()
+                } else {
+                    ZStack {
+                        SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                        HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                    }
+                }
+
+                SocialMediaPanel()
+                    .padding()
+            }
+            .background(.black)
+*/            
             FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
                 .padding()
                 .disabled(noMetal3)
@@ -98,7 +117,19 @@ struct SpeedMetal: App {
     }
 }
 
-struct SocialMediaHeader: View {
+struct SocialMediaHeadline: View {
+    var title: String
+
+    var body: some View {
+        HStack {
+            Headline(title: title)
+            Spacer()
+            SocialMediaPanel()
+        }
+    }
+}
+
+struct Headline: View {
     var title: String
 
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -107,12 +138,21 @@ struct SocialMediaHeader: View {
     }
 
     var body: some View {
+        Text(title)
+            .font(.system(isRegular ? .largeTitle : .title, design: .rounded, weight: .semibold))
+            .foregroundColor(.gray)
+    }
+}
+
+struct SocialMediaPanel: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isRegular: Bool {
+        sizeClass == .regular
+    }
+
+    var body: some View {
         let iconSize: CGFloat = isRegular ? 44 : 36
         HStack {
-            Text(title)
-                .font(.system(isRegular ? .largeTitle : .title, design: .rounded, weight: .semibold))
-                .foregroundColor(.gray)
-            Spacer()
             Group {
                 Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
                     Image("mac_and_i-logo")
