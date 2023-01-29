@@ -74,6 +74,7 @@ struct SpeedMetal: App {
 
     var body: some Scene {
         WindowGroup {
+
             VStack {
                 SocialMediaHeadline(title: "SpeedMetal")
                     .padding()
@@ -92,9 +93,14 @@ struct SpeedMetal: App {
             .background(.black)
 
 /*
-            HStack(alignment: .top) {
-                RendererTimesPanel(rendererTimes: rendererTimes)
-                    .padding()
+            HStack {
+                VStack {
+                    Headline(title: "SpeedMetal")
+                        .padding()
+                    RendererTimesPanel(rendererTimes: rendererTimes)
+                        .padding()
+                    Spacer()
+                }
 
                 if noMetal3 {
                     NoMetal3Comfort()
@@ -105,11 +111,14 @@ struct SpeedMetal: App {
                     }
                 }
 
-                SocialMediaPanel()
-                    .padding()
+                VStack {
+                    SocialMediaPanel()
+                        .padding()
+                    Spacer()
+                }
             }
             .background(.black)
-*/            
+*/
             FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
                 .padding()
                 .disabled(noMetal3)
@@ -194,15 +203,15 @@ struct RendererTimesPanel: View {
                 Text("\u{03a3}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text("\(Int(rendererTimes.commandBufferSum * 1000))")
-                Text("\(Int(rendererTimes.drawFunctionSum * 1000))")
+                Text(String(format: "%6d", Int(rendererTimes.commandBufferSum * 1000)))
+                Text(String(format: "%6d", Int(rendererTimes.drawFunctionSum * 1000)))
             }
             VStack {
                 Text("\u{2300}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text("\(Int(rendererTimes.commandBufferAvg * 1000))")
-                Text("\(Int(rendererTimes.drawFunctionAvg * 1000))")
+                Text(String(format: "%6d", Int(rendererTimes.commandBufferAvg * 1000)))
+                Text(String(format: "%6d", Int(rendererTimes.drawFunctionSum * 1000)))
             }
         }
         .font(.system(isRegular ? .title3 : .headline, design: .monospaced, weight: .regular))
