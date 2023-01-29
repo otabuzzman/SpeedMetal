@@ -160,8 +160,8 @@ struct SocialMediaPanel: View {
     }
 
     var body: some View {
-        let iconSize: CGFloat = isRegular ? 44 : 36
         HStack {
+            let iconSize: CGFloat = isRegular ? 44 : 36
             Group {
                 Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
                     Image("mac_and_i-logo")
@@ -268,7 +268,6 @@ struct FlightControlPanel: View {
     }
 
     var body: some View {
-
         HStack {
             let iconSize: CGFloat = isRegular ? 44 : 36
             HStack {
