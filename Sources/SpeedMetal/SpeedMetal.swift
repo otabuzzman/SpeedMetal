@@ -62,6 +62,8 @@ struct ContentView: View {
     @StateObject var rendererControl = RendererControl.shared
     @StateObject var smViewControl   = SMViewControl.shared
 
+    @State private var isPortrait = UIScreen.main.bounds.isPortrait
+
     private var noMetal3   = true
     private var noUpscaler = false
 
@@ -74,10 +76,29 @@ struct ContentView: View {
     }
 
     var body: some View {
-        AdaptiveContent(title: "SpeedMetal", isPortrait: true, noMetal3: noMetal3)
+        AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
             .environmentObject(smViewControl)
             .environmentObject(rendererControl)
             .background(.black)
+            .onRotate { _ in
+                // https://stackoverflow.com/a/65586833/9172095
+                // UIDevice.orientation not save on app launch
+                let scenes = UIApplication.shared.connectedScenes
+                let windowScene = scenes.first as? UIWindowScene
+
+                guard
+                    let isPortrait = windowScene?.interfaceOrientation.isPortrait
+                else { return }
+
+                // interface orientation not affected when rotated to flat 
+                if self.isPortrait == isPortrait { return }
+
+                self.isPortrait = isPortrait
+
+                // advance single frame to force redraw
+                smViewControl.control = .framesToRender
+                smViewControl.framesToRender += 1
+            }
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
@@ -385,5 +406,17 @@ struct OnRotate: ViewModifier {
 extension View {
     func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
         self.modifier(OnRotate(action: action))
+    }
+}
+
+extension CGRect {
+    var aspectRatio: CGFloat {
+        get { width/height }
+    }
+    var isLandscape: Bool {
+        get { aspectRatio>1 }
+    }
+    var isPortrait: Bool {
+        get { !isLandscape }
     }
 }
