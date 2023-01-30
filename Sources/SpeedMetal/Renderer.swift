@@ -4,11 +4,15 @@ import MetalKit
 import MetalFX
 import simd
 
-struct RendererTimes {
-    var commandBufferSum: TimeInterval = 0
-    var commandBufferAvg: TimeInterval = 0
-    var drawFunctionSum: TimeInterval  = 0
-    var drawFunctionAvg: TimeInterval  = 0
+class RendererControl: ObservableObject {
+    static let shared = RendererControl()
+    private init() {}
+
+    @Published var drawLoopEnabled = true
+    @Published var commandBufferSum: TimeInterval = 0
+    @Published var commandBufferAvg: TimeInterval = 0
+    @Published var drawFunctionSum: TimeInterval  = 0
+    @Published var drawFunctionAvg: TimeInterval  = 0
 }
 
 class Renderer: NSObject {
@@ -17,7 +21,7 @@ class Renderer: NSObject {
 
     // options
     var stage: Stage!                { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1   { didSet { parent.drawLoopEnabled = true } }
+    var framesToRender: UInt32 = 1   { didSet { RendererControl.shared.drawLoopEnabled = true } }
     var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
@@ -58,13 +62,7 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
-    private var commandBufferSum: TimeInterval = 0
-    private var commandBufferAvg: TimeInterval = 0
-    private var drawFunctionSum: TimeInterval  = 0
-    private var drawFunctionAvg: TimeInterval  = 0
-
-    init(_ parent: SMView, stage: Stage, device: MTLDevice) {
-        self.parent = parent
+    init(stage: Stage, device: MTLDevice) {
         self.stage  = stage
         self.device = device
         super.init()
@@ -80,10 +78,10 @@ class Renderer: NSObject {
     }
 
     private func resetStage() {
-        frameCount       = 0
-        parent.drawLoopEnabled = true
-        commandBufferSum = 0
-        drawFunctionSum  = 0
+        frameCount = 0
+        RendererControl.shared.drawLoopEnabled  = true
+        RendererControl.shared.commandBufferSum = 0
+        RendererControl.shared.drawFunctionSum  = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -102,10 +100,10 @@ class Renderer: NSObject {
     }
 
     private func resetUpscaler() {
-        frameCount       = 0
-        parent.drawLoopEnabled = true
-        commandBufferSum = 0
-        drawFunctionSum  = 0
+        frameCount = 0
+        RendererControl.shared.drawLoopEnabled  = true
+        RendererControl.shared.commandBufferSum = 0
+        RendererControl.shared.drawFunctionSum  = 0
 
         createTexturesAndUpscaler()
     }
@@ -467,12 +465,12 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        if !parent.drawLoopEnabled {
+        if !RendererControl.shared.drawLoopEnabled {
             return
         }
         if frameCount > framesToRender {
-            parent.drawLoopEnabled = false
-            view.isPaused          = true
+            RendererControl.shared.drawLoopEnabled = false
+            view.isPaused                          = true
         }
         maxFramesSignal.wait()
 
@@ -487,8 +485,8 @@ extension Renderer: MTKViewDelegate {
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
-            commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
-            commandBufferAvg = commandBufferSum / Double(frameCount)
+            RendererControl.shared.commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
+            RendererControl.shared.commandBufferAvg = RendererControl.shared.commandBufferSum / Double(frameCount)
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
@@ -565,9 +563,8 @@ extension Renderer: MTKViewDelegate {
 
         commandBuffer.commit()
 
-        drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
-        drawFunctionAvg = drawFunctionSum / Double(frameCount)
-        parent.rendererTimes = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
+        RendererControl.shared.drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
+        RendererControl.shared.drawFunctionAvg = RendererControl.shared.drawFunctionSum / Double(frameCount)
     }
 }
 

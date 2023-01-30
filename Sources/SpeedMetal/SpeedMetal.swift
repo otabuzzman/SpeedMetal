@@ -14,8 +14,6 @@ struct SMView: UIViewRepresentable {
     var lineUp: LineUp
     @Binding var framesToRender: UInt32
     var upscaleFactor: Float
-    @Binding var rendererTimes: RendererTimes
-    @Binding var drawLoopEnabled: Bool
 
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
@@ -53,12 +51,11 @@ struct SMView: UIViewRepresentable {
 }
 
 struct ContentView: View {
+    @StateObject var rendererControl = RendererControl.shared
     @State private var control = SMViewControl.none
     @State private var lineUp  = LineUp.threeByThree
     @State private var framesToRender: UInt32 = 1
     @State private var upscaleFactor: Float   = 1.0
-    @State private var rendererTimes   = RendererTimes()
-    @State private var drawLoopEnabled = true
 
     private var noMetal3   = true
     private var noUpscaler = false
@@ -76,14 +73,14 @@ struct ContentView: View {
         VStack {
             SocialMediaHeadline(title: "SpeedMetal")
                 .padding()
-            RendererTimesPanel(rendererTimes: rendererTimes)
+            RendererTimesPanel(commandBufferSum: rendererControl.commandBufferSum, commandBufferAvg: rendererControl.commandBufferAvg, drawFunctionSum: rendererControl.drawFunctionSum, drawFunctionAvg: rendererControl.drawFunctionAvg)
                 .padding()
 
             if noMetal3 {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                 }
             }
@@ -95,7 +92,7 @@ struct ContentView: View {
             VStack {
                 Headline(title: "SpeedMetal")
                     .padding()
-                RendererTimesPanel(rendererTimes: rendererTimes)
+                RendererTimesPanel(commandBufferSum: rendererControl.commandBufferSum, commandBufferAvg: rendererControl.commandBufferAvg, drawFunctionSum: rendererControl.drawFunctionSum, drawFunctionAvg: rendererControl.drawFunctionAvg)
                     .padding()
                 Spacer()
             }
@@ -104,7 +101,7 @@ struct ContentView: View {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                 }
             }
@@ -117,7 +114,7 @@ struct ContentView: View {
         }
         .background(.black)
 */
-        FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
+        FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
             .disabled(noMetal3)
     }
@@ -189,7 +186,10 @@ struct SocialMediaPanel: View {
 }
 
 struct RendererTimesPanel: View {
-    var rendererTimes: RendererTimes
+    var commandBufferSum: TimeInterval
+    var commandBufferAvg: TimeInterval
+    var drawFunctionSum: TimeInterval
+    var drawFunctionAvg: TimeInterval
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isRegular: Bool {
@@ -209,15 +209,15 @@ struct RendererTimesPanel: View {
                 Text("\u{03a3}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text(String(format: "%6d", Int(rendererTimes.commandBufferSum * 1000)))
-                Text(String(format: "%6d", Int(rendererTimes.drawFunctionSum * 1000)))
+                Text(String(format: "%6d", Int(commandBufferSum * 1000)))
+                Text(String(format: "%6d", Int(drawFunctionSum * 1000)))
             }
             VStack {
                 Text("\u{2300}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text(String(format: "%6d", Int(rendererTimes.commandBufferAvg * 1000)))
-                Text(String(format: "%6d", Int(rendererTimes.drawFunctionSum * 1000)))
+                Text(String(format: "%6d", Int(commandBufferAvg * 1000)))
+                Text(String(format: "%6d", Int(drawFunctionSum * 1000)))
             }
         }
         .font(.system(isRegular ? .title3 : .headline, design: .monospaced, weight: .regular))
