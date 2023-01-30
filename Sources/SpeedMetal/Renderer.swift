@@ -16,7 +16,6 @@ class RendererControl: ObservableObject {
 }
 
 class Renderer: NSObject {
-    private var parent:      SMView
     private(set) var device: MTLDevice
 
     // options

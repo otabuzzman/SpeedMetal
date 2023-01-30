@@ -18,7 +18,7 @@ struct SMView: UIViewRepresentable {
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
         let stage  = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(self, stage: stage, device: device)
+        return Renderer(stage: stage, device: device)
     }
 
     func makeUIView(context: Context) -> MTKView {
