@@ -61,6 +61,9 @@ class Renderer: NSObject {
     private var spatialUpscaler: MTLFXSpatialScaler!
     private var upscaledTarget:  MTLTexture!
 
+    private var commandBufferSum: TimeInterval = 0
+    private var drawFunctionSum: TimeInterval  = 0
+
     init(stage: Stage, device: MTLDevice) {
         self.stage  = stage
         self.device = device
@@ -79,8 +82,8 @@ class Renderer: NSObject {
     private func resetStage() {
         frameCount = 0
         RendererControl.shared.drawLoopEnabled  = true
-        RendererControl.shared.commandBufferSum = 0
-        RendererControl.shared.drawFunctionSum  = 0
+        commandBufferSum = 0
+        drawFunctionSum  = 0
 
         createBuffers()
         createAccelerationStructures()
@@ -101,8 +104,8 @@ class Renderer: NSObject {
     private func resetUpscaler() {
         frameCount = 0
         RendererControl.shared.drawLoopEnabled  = true
-        RendererControl.shared.commandBufferSum = 0
-        RendererControl.shared.drawFunctionSum  = 0
+        commandBufferSum = 0
+        drawFunctionSum  = 0
 
         createTexturesAndUpscaler()
     }
@@ -467,10 +470,6 @@ extension Renderer: MTKViewDelegate {
         if !RendererControl.shared.drawLoopEnabled {
             return
         }
-        if frameCount > framesToRender {
-            RendererControl.shared.drawLoopEnabled = false
-            view.isPaused                          = true
-        }
         maxFramesSignal.wait()
 
         let t0 = CFAbsoluteTimeGetCurrent()
@@ -484,8 +483,7 @@ extension Renderer: MTKViewDelegate {
         let commandBuffer = queue.makeCommandBuffer()!
         commandBuffer.addCompletedHandler() { [self] _ in
             maxFramesSignal.signal()
-            RendererControl.shared.commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
-            RendererControl.shared.commandBufferAvg = RendererControl.shared.commandBufferSum / Double(frameCount)
+            commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
@@ -562,8 +560,17 @@ extension Renderer: MTKViewDelegate {
 
         commandBuffer.commit()
 
-        RendererControl.shared.drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
-        RendererControl.shared.drawFunctionAvg = RendererControl.shared.drawFunctionSum / Double(frameCount)
+        drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
+
+        if frameCount > framesToRender {
+            view.isPaused = true
+
+            RendererControl.shared.drawLoopEnabled  = false
+            RendererControl.shared.commandBufferSum = commandBufferSum
+            RendererControl.shared.commandBufferAvg = commandBufferSum / Double(frameCount)
+            RendererControl.shared.drawFunctionSum  = drawFunctionSum
+            RendererControl.shared.drawFunctionAvg  = drawFunctionSum / Double(frameCount)
+        }
     }
 }
 
