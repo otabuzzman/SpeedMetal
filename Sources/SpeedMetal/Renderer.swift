@@ -12,11 +12,12 @@ struct RendererTimes {
 }
 
 class Renderer: NSObject {
+    private var parent:      SMView
     private(set) var device: MTLDevice
 
     // options
     var stage: Stage!                { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1   { didSet { enabled = true } }
+    var framesToRender: UInt32 = 1   { didSet { parent.drawLoopEnabled = true } }
     var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
@@ -62,13 +63,9 @@ class Renderer: NSObject {
     private var drawFunctionSum: TimeInterval  = 0
     private var drawFunctionAvg: TimeInterval  = 0
 
-    @Binding private var enabled: Bool
-    @Binding private var times:   RendererTimes
-
-    init(stage: Stage, enabled: Binding<Bool>, times: Binding<RendererTimes>, device: MTLDevice) {
+    init(_ parent: SMView, stage: Stage, device: MTLDevice) {
+        self.parent = parent
         self.stage  = stage
-        _enabled    = enabled
-        _times      = times
         self.device = device
         super.init()
 
@@ -84,7 +81,7 @@ class Renderer: NSObject {
 
     private func resetStage() {
         frameCount       = 0
-        enabled          = true
+        parent.drawLoopEnabled = true
         commandBufferSum = 0
         drawFunctionSum  = 0
 
@@ -106,7 +103,7 @@ class Renderer: NSObject {
 
     private func resetUpscaler() {
         frameCount       = 0
-        enabled          = true
+        parent.drawLoopEnabled = true
         commandBufferSum = 0
         drawFunctionSum  = 0
 
@@ -470,12 +467,12 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        if !enabled {
+        if !parent.drawLoopEnabled {
             return
         }
         if frameCount > framesToRender {
-            enabled       = false
-            view.isPaused = true
+            parent.drawLoopEnabled = false
+            view.isPaused          = true
         }
         maxFramesSignal.wait()
 
@@ -570,7 +567,7 @@ extension Renderer: MTKViewDelegate {
 
         drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
         drawFunctionAvg = drawFunctionSum / Double(frameCount)
-        times = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
+        parent.rendererTimes = true = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
     }
 }
 

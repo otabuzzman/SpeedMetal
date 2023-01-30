@@ -20,7 +20,7 @@ struct SMView: UIViewRepresentable {
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
         let stage  = Stage.hoistCornellBox(lineUp: lineUp, device: device)
-        return Renderer(stage: stage, enabled: $drawLoopEnabled, times: $rendererTimes, device: device)
+        return Renderer(self, stage: stage, device: device)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -52,8 +52,7 @@ struct SMView: UIViewRepresentable {
     }
 }
 
-@main
-struct SpeedMetal: App {
+struct ContentView: View {
     @State private var control = SMViewControl.none
     @State private var lineUp  = LineUp.threeByThree
     @State private var framesToRender: UInt32 = 1
@@ -72,56 +71,63 @@ struct SpeedMetal: App {
         noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
-    var body: some Scene {
-        WindowGroup {
+    var body: some View {
 
+        VStack {
+            SocialMediaHeadline(title: "SpeedMetal")
+                .padding()
+            RendererTimesPanel(rendererTimes: rendererTimes)
+                .padding()
+
+            if noMetal3 {
+                NoMetal3Comfort()
+            } else {
+                ZStack {
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                }
+            }
+        }
+        .background(.black)
+
+/*
+        HStack {
             VStack {
-                SocialMediaHeadline(title: "SpeedMetal")
+                Headline(title: "SpeedMetal")
                     .padding()
                 RendererTimesPanel(rendererTimes: rendererTimes)
                     .padding()
+                Spacer()
+            }
 
-                if noMetal3 {
-                    NoMetal3Comfort()
-                } else {
-                    ZStack {
-                        SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
-                        HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                    }
+            if noMetal3 {
+                NoMetal3Comfort()
+            } else {
+                ZStack {
+                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
+                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                 }
             }
-            .background(.black)
 
-/*
-            HStack {
-                VStack {
-                    Headline(title: "SpeedMetal")
-                        .padding()
-                    RendererTimesPanel(rendererTimes: rendererTimes)
-                        .padding()
-                    Spacer()
-                }
-
-                if noMetal3 {
-                    NoMetal3Comfort()
-                } else {
-                    ZStack {
-                        SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor, rendererTimes: $rendererTimes, drawLoopEnabled: $drawLoopEnabled)
-                        HighlightRaycerOutput(upscaleFactor: upscaleFactor)
-                    }
-                }
-
-                VStack {
-                    SocialMediaPanel()
-                        .padding()
-                    Spacer()
-                }
+            VStack {
+                SocialMediaPanel()
+                    .padding()
+                Spacer()
             }
-            .background(.black)
+        }
+        .background(.black)
 */
-            FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
-                .padding()
-                .disabled(noMetal3)
+        FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: drawLoopEnabled, noUpscaler: noUpscaler)
+            .padding()
+            .disabled(noMetal3)
+    }
+}
+
+@main
+struct SpeedMetal: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
         }
     }
 }
