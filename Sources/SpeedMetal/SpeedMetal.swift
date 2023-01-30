@@ -6,14 +6,14 @@ class SMViewControl: ObservableObject {
     static let shared = SMViewControl()
     private init() {}
 
-    enum SMViewControl {
+    enum SMViewCommand {
         case none
         case lineUp
         case framesToRender
         case upscaleFactor
     }
 
-    @Published var control = SMViewControl.none
+    @Published var control = SMViewCommand.none
     @Published var lineUp  = LineUp.threeByThree
     @Published var framesToRender: UInt32 = 1
     @Published var upscaleFactor: Float   = 1.0
@@ -24,7 +24,7 @@ struct SMView: UIViewRepresentable {
 
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
-        let stage  = Stage.hoistCornellBox(lineUp: lineUp, device: device)
+        let stage  = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: device)
         return Renderer(stage: stage, device: device)
     }
 
@@ -33,6 +33,7 @@ struct SMView: UIViewRepresentable {
         view.backgroundColor  = .black
         view.colorPixelFormat = .rgba16Float
         view.delegate         = context.coordinator
+        view.preferredFramesPerSecond = 10
         return view
     }
 
@@ -84,8 +85,8 @@ struct ContentView: View {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(smViewControl: SMViewControl)
-                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                    SMView(smViewControl: smViewControl)
+                    HighlightRaycerOutput(upscaleFactor: smViewControl.upscaleFactor)
                 }
             }
         }
@@ -105,8 +106,8 @@ struct ContentView: View {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(smViewControl: SMViewControl)
-                    HighlightRaycerOutput(upscaleFactor: upscaleFactor)
+                    SMView(smViewControl: smViewControl)
+                    HighlightRaycerOutput(upscaleFactor: smViewControl.upscaleFactor)
                 }
             }
 
@@ -118,7 +119,7 @@ struct ContentView: View {
         }
         .background(.black)
 */
-        FlightControlPanel(smViewControl: SMViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
+        FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
             .disabled(noMetal3)
     }
