@@ -20,7 +20,7 @@ class SMViewControl: ObservableObject {
 }
 
 struct SMView: UIViewRepresentable {
-    var smViewControl: SMViewControl
+    @EnvironmentObject var smViewControl: SMViewControl
 
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
@@ -74,62 +74,61 @@ struct ContentView: View {
     }
 
     var body: some View {
+        AdaptiveContent(title: "SpeedMetal", isPortrait: true, noMetal3: noMetal3)
+            .environmentObject(smViewControl)
+            .environmentObject(rendererControl)
+            .background(.black)
 
-        VStack {
-            SocialMediaHeadline(title: "SpeedMetal")
-                .padding()
-            RendererTimesPanel(rendererControl: rendererControl)
-                .padding()
-
-            if noMetal3 {
-                NoMetal3Comfort()
-            } else {
-                ZStack {
-                    SMView(smViewControl: smViewControl)
-                    HighlightRaycerOutput(upscaleFactor: smViewControl.upscaleFactor)
-                }
-            }
-        }
-        .background(.black)
-
-/*
-        HStack {
-            VStack {
-                Headline(title: "SpeedMetal")
-                    .padding()
-                RendererTimesPanel(rendererControl: rendererControl)
-                    .padding()
-                Spacer()
-            }
-
-            if noMetal3 {
-                NoMetal3Comfort()
-            } else {
-                ZStack {
-                    SMView(smViewControl: smViewControl)
-                    HighlightRaycerOutput(upscaleFactor: smViewControl.upscaleFactor)
-                }
-            }
-
-            VStack {
-                SocialMediaPanel()
-                    .padding()
-                Spacer()
-            }
-        }
-        .background(.black)
-*/
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
             .disabled(noMetal3)
     }
 }
 
-@main
-struct SpeedMetal: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
+struct AdaptiveContent: View {
+    var title: String
+    var isPortrait: Bool
+    var noMetal3: Bool
+
+    private var sharedContent: some View {
+        if noMetal3 {
+            return NoMetal3Comfort()
+        } else {
+            return ZStack {
+                SMView()
+                HighlightRaycerOutput()
+            }
+        }
+    }
+
+    var body: some View {
+        if isPortrait {
+            VStack {
+                SocialMediaHeadline(title: title)
+                    .padding()
+                RendererTimesPanel()
+                    .padding()
+
+                sharedContent
+            }
+        } else {
+            HStack {
+                VStack {
+                    Headline(title: title)
+                        .padding()
+                    RendererTimesPanel()
+                        .padding()
+                    Spacer()
+                }
+
+                sharedContent
+
+                VStack {
+                    SocialMediaPanel()
+                        .padding()
+                    Spacer()
+                }
+            }
         }
     }
 }
@@ -191,7 +190,7 @@ struct SocialMediaPanel: View {
 }
 
 struct RendererTimesPanel: View {
-    var rendererControl: RendererControl
+    @EnvironmentObject var rendererControl: RendererControl
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isRegular: Bool {
@@ -244,12 +243,12 @@ struct NoMetal3Comfort: View {
 }
 
 struct HighlightRaycerOutput: View {
-    var upscaleFactor: Float
+    @EnvironmentObject var smViewControl: SMViewControl
 
     var body: some View {
         GeometryReader { dim in
             VStack(alignment: .leading) {
-                let upscaleFactor = CGFloat(upscaleFactor)
+                let upscaleFactor = CGFloat(smViewControl.upscaleFactor)
                 // inversely map upscale factor 2...8 to linewidth 8...2
                 let lineWidth = 8 - upscaleFactor / 8 * 6
                 Spacer()
@@ -363,26 +362,11 @@ struct UpscalerIcon: View {
     }
 }
 
-// experimental starts here
-struct AStack<Content: View>: View {
-    private var content: () -> Content
-
-    @Environment(\.verticalSizeClass) private var sizeClass
-    private var isRegular: Bool {
-        sizeClass == .regular
-    }
-
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-    }
-
-    var body: some View {
-        Group {
-            if isRegular {
-                VStack(content: content)
-            } else {
-                HStack(content: content)
-            }
+@main
+struct SpeedMetal: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
         }
     }
 }
