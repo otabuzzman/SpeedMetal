@@ -2,18 +2,25 @@ import MetalKit
 import MetalFX
 import SwiftUI
 
-enum SMViewControl {
-    case none
-    case lineUp
-    case framesToRender
-    case upscaleFactor
+class SMViewControl: ObservableObject {
+    static let shared = SMViewControl()
+    private init() {}
+
+    enum SMViewControl {
+        case none
+        case lineUp
+        case framesToRender
+        case upscaleFactor
+    }
+
+    @Published var control = SMViewControl.none
+    @Published var lineUp  = LineUp.threeByThree
+    @Published var framesToRender: UInt32 = 1
+    @Published var upscaleFactor: Float   = 1.0
 }
 
 struct SMView: UIViewRepresentable {
-    @Binding var control: SMViewControl
-    var lineUp: LineUp
-    @Binding var framesToRender: UInt32
-    var upscaleFactor: Float
+    var smViewControl: SMViewControl
 
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
@@ -30,32 +37,29 @@ struct SMView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: MTKView, context: Context) {
-        switch control {
+        switch smViewControl.control {
         case .none:
             return
         case .lineUp:
-            let stage = Stage.hoistCornellBox(lineUp: lineUp, device: view.device!)
+            let stage = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: view.device!)
             context.coordinator.framesToRender = 1
             context.coordinator.stage          = stage
-            framesToRender = 1
+            smViewControl.framesToRender = 1
         case .framesToRender:
-            context.coordinator.framesToRender = framesToRender
+            context.coordinator.framesToRender = smViewControl.framesToRender
         case .upscaleFactor:
             context.coordinator.framesToRender = 1
-            context.coordinator.upscaleFactor  = upscaleFactor
-            framesToRender = 1
+            context.coordinator.upscaleFactor  = smViewControl.upscaleFactor
+            smViewControl.framesToRender = 1
         }
-        control = .none // prevent last command running after Renderer updated Bindings
+        smViewControl.control = .none // prevent last command running after Renderer updated Bindings
         view.isPaused = false
     }
 }
 
 struct ContentView: View {
     @StateObject var rendererControl = RendererControl.shared
-    @State private var control = SMViewControl.none
-    @State private var lineUp  = LineUp.threeByThree
-    @State private var framesToRender: UInt32 = 1
-    @State private var upscaleFactor: Float   = 1.0
+    @StateObject var smViewControl   = SMViewControl.shared
 
     private var noMetal3   = true
     private var noUpscaler = false
@@ -73,14 +77,14 @@ struct ContentView: View {
         VStack {
             SocialMediaHeadline(title: "SpeedMetal")
                 .padding()
-            RendererTimesPanel(commandBufferSum: rendererControl.commandBufferSum, commandBufferAvg: rendererControl.commandBufferAvg, drawFunctionSum: rendererControl.drawFunctionSum, drawFunctionAvg: rendererControl.drawFunctionAvg)
+            RendererTimesPanel(rendererControl: rendererControl)
                 .padding()
 
             if noMetal3 {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor)
+                    SMView(smViewControl: SMViewControl)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                 }
             }
@@ -92,7 +96,7 @@ struct ContentView: View {
             VStack {
                 Headline(title: "SpeedMetal")
                     .padding()
-                RendererTimesPanel(commandBufferSum: rendererControl.commandBufferSum, commandBufferAvg: rendererControl.commandBufferAvg, drawFunctionSum: rendererControl.drawFunctionSum, drawFunctionAvg: rendererControl.drawFunctionAvg)
+                RendererTimesPanel(rendererControl: rendererControl)
                     .padding()
                 Spacer()
             }
@@ -101,7 +105,7 @@ struct ContentView: View {
                 NoMetal3Comfort()
             } else {
                 ZStack {
-                    SMView(control: $control, lineUp: lineUp, framesToRender: $framesToRender, upscaleFactor: upscaleFactor)
+                    SMView(smViewControl: SMViewControl)
                     HighlightRaycerOutput(upscaleFactor: upscaleFactor)
                 }
             }
@@ -114,7 +118,7 @@ struct ContentView: View {
         }
         .background(.black)
 */
-        FlightControlPanel(control: $control, lineUp: $lineUp, framesToRender: $framesToRender, upscaleFactor: $upscaleFactor, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
+        FlightControlPanel(smViewControl: SMViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
             .disabled(noMetal3)
     }
@@ -186,10 +190,7 @@ struct SocialMediaPanel: View {
 }
 
 struct RendererTimesPanel: View {
-    var commandBufferSum: TimeInterval
-    var commandBufferAvg: TimeInterval
-    var drawFunctionSum: TimeInterval
-    var drawFunctionAvg: TimeInterval
+    var rendererControl: RendererControl
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isRegular: Bool {
@@ -209,15 +210,15 @@ struct RendererTimesPanel: View {
                 Text("\u{03a3}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text(String(format: "%6d", Int(commandBufferSum * 1000)))
-                Text(String(format: "%6d", Int(drawFunctionSum * 1000)))
+                Text(String(format: "%6d", Int(rendererControl.commandBufferSum * 1000)))
+                Text(String(format: "%6d", Int(rendererControl.drawFunctionSum * 1000)))
             }
             VStack {
                 Text("\u{2300}")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text(String(format: "%6d", Int(commandBufferAvg * 1000)))
-                Text(String(format: "%6d", Int(drawFunctionSum * 1000)))
+                Text(String(format: "%6d", Int(rendererControl.commandBufferAvg * 1000)))
+                Text(String(format: "%6d", Int(rendererControl.drawFunctionSum * 1000)))
             }
         }
         .font(.system(isRegular ? .title3 : .headline, design: .monospaced, weight: .regular))
@@ -261,10 +262,7 @@ struct HighlightRaycerOutput: View {
 }
 
 struct FlightControlPanel: View {
-    @Binding var control: SMViewControl
-    @Binding var lineUp: LineUp
-    @Binding var framesToRender: UInt32
-    @Binding var upscaleFactor: Float
+    var smViewControl: SMViewControl
     var drawLoopEnabled: Bool
     var noUpscaler: Bool
 
@@ -278,24 +276,24 @@ struct FlightControlPanel: View {
             let iconSize: CGFloat = isRegular ? 44 : 36
             HStack {
                 Button {
-                    control = .framesToRender
-                    framesToRender += 5
+                    smViewControl.control = .framesToRender
+                    smViewControl.framesToRender += 5
                 } label: {
                     Image(systemName: "goforward.5")
                         .resizable()
                         .frame(width: iconSize, height: iconSize)
                 }
                 Button {
-                    control = .framesToRender
-                    framesToRender += 45
+                    smViewControl.control = .framesToRender
+                    smViewControl.framesToRender += 45
                 } label: {
                     Image(systemName: "goforward.45")
                         .resizable()
                         .frame(width: iconSize, height: iconSize)
                 }
                 Button {
-                    control = .framesToRender
-                    framesToRender += 90
+                    smViewControl.control = .framesToRender
+                    smViewControl.framesToRender += 90
                 } label: {
                     Image(systemName: "goforward.90")
                         .resizable()
@@ -303,37 +301,37 @@ struct FlightControlPanel: View {
                 }
             }
             Button {
-                control = .lineUp
-                lineUp  = .oneByOne
+                smViewControl.control = .lineUp
+                smViewControl.lineUp  = .oneByOne
             } label: {
                 Image(systemName: "square")
                     .resizable()
                     .frame(width: iconSize, height: iconSize)
             }
-            .disabled(lineUp == .oneByOne || drawLoopEnabled)
+            .disabled(smViewControl.lineUp == .oneByOne || drawLoopEnabled)
             Button {
-                control = .lineUp
-                lineUp  = .twoByTwo
+                smViewControl.control = .lineUp
+                smViewControl.lineUp  = .twoByTwo
             } label: {
                 Image(systemName: "square.grid.2x2")
                     .resizable()
                     .frame(width: iconSize, height: iconSize)
             }
-            .disabled(lineUp == .twoByTwo || drawLoopEnabled)
+            .disabled(smViewControl.lineUp == .twoByTwo || drawLoopEnabled)
             Button {
-                control = .lineUp
-                lineUp  = .threeByThree
+                smViewControl.control = .lineUp
+                smViewControl.lineUp  = .threeByThree
             } label: {
                 Image(systemName: "square.grid.3x3")
                     .resizable()
                     .frame(width: iconSize, height: iconSize)
             }
-            .disabled(lineUp == .threeByThree || drawLoopEnabled)
+            .disabled(smViewControl.lineUp == .threeByThree || drawLoopEnabled)
             HStack {
                 Button {
-                    control = .upscaleFactor
-                    let factor    = upscaleFactor * 2.0
-                    upscaleFactor = factor > 8 ? 1.0 : factor
+                    smViewControl.control = .upscaleFactor
+                    let factor = smViewControl.upscaleFactor * 2.0
+                    smViewControl.upscaleFactor = factor > 8 ? 1.0 : factor
                 } label: {
                     UpscalerIcon()
                         .frame(width: iconSize, height: iconSize)
