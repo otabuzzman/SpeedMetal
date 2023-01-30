@@ -567,7 +567,7 @@ extension Renderer: MTKViewDelegate {
 
         drawFunctionSum += CFAbsoluteTimeGetCurrent() - t0
         drawFunctionAvg = drawFunctionSum / Double(frameCount)
-        parent.rendererTimes = true = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
+        parent.rendererTimes = RendererTimes(commandBufferSum: commandBufferSum, commandBufferAvg: commandBufferAvg, drawFunctionSum: drawFunctionSum, drawFunctionAvg: drawFunctionAvg)
     }
 }
 
