@@ -154,6 +154,39 @@ struct AdaptiveContent: View {
     }
 }
 
+extension UIScreen {
+    var isLandscape: Bool {
+        get { Self.main.bounds.aspectRatio > 1 }
+    }
+
+    var isPortrait: Bool {
+        get { !isLandscape }
+    }
+}
+
+extension CGRect {
+    var aspectRatio: CGFloat {
+        get { width / height }
+    }
+}
+
+struct OnRotate: ViewModifier {
+    let action: (UIDeviceOrientation) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { orientation in
+                action(UIDevice.current.orientation)
+            }
+    }
+}
+
+extension View {
+    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
+        self.modifier(OnRotate(action: action))
+    }
+}
+
 struct SocialMediaHeadline: View {
     var title: String
 
@@ -389,34 +422,5 @@ struct SpeedMetal: App {
         WindowGroup {
             ContentView()
         }
-    }
-}
-
-struct OnRotate: ViewModifier {
-    let action: (UIDeviceOrientation) -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { orientation in
-                action(UIDevice.current.orientation)
-            }
-    }
-}
-
-extension View {
-    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
-        self.modifier(OnRotate(action: action))
-    }
-}
-
-extension CGRect {
-    var aspectRatio: CGFloat {
-        get { width/height }
-    }
-    var isLandscape: Bool {
-        get { aspectRatio>1 }
-    }
-    var isPortrait: Bool {
-        get { !isLandscape }
     }
 }
