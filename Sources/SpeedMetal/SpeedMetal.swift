@@ -80,21 +80,7 @@ struct ContentView: View {
             .environmentObject(smViewControl)
             .environmentObject(rendererControl)
             .background(.black)
-            .onRotate { _ in
-                // https://stackoverflow.com/a/65586833/9172095
-                // UIDevice.orientation not save on app launch
-                let scenes = UIApplication.shared.connectedScenes
-                let windowScene = scenes.first as? UIWindowScene
-
-                guard
-                    let isPortrait = windowScene?.interfaceOrientation.isPortrait
-                else { return }
-
-                // interface orientation not affected when rotated to flat 
-                if self.isPortrait == isPortrait { return }
-
-                self.isPortrait = isPortrait
-
+            .onRotate(isPortrait: $isPortrait) { _ in
                 // advance single frame to force redraw
                 smViewControl.control = .framesToRender
                 smViewControl.framesToRender += 1
@@ -171,11 +157,26 @@ extension CGRect {
 }
 
 struct OnRotate: ViewModifier {
+    @Binding var isPortrait: Bool
     let action: (UIDeviceOrientation) -> Void
 
     func body(content: Content) -> some View {
         content
             .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { orientation in
+                // https://stackoverflow.com/a/65586833/9172095
+                // UIDevice.orientation not save on app launch
+                let scenes = UIApplication.shared.connectedScenes
+                let windowScene = scenes.first as? UIWindowScene
+
+                guard
+                    let isPortrait = windowScene?.interfaceOrientation.isPortrait
+                else { return }
+
+                // interface orientation not affected when rotated to flat
+                if self.isPortrait == isPortrait { return }
+
+                self.isPortrait = isPortrait
+
                 action(UIDevice.current.orientation)
             }
     }
