@@ -64,12 +64,6 @@ struct ContentView: View {
 
     @State private var isPortrait = UIScreen.isPortrait
 
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    private var isCompact: Bool {
-        verticalSizeClass == .compact || horizontalSizeClass == .compact
-    }
-
     private var noMetal3   = true
     private var noUpscaler = false
 
@@ -93,14 +87,14 @@ struct ContentView: View {
                     smViewControl.framesToRender += 1
                 }
 
-            if rendererControl.drawLoopEnabled {
+            if rendererControl.drawLoopEnabled && !noMetal3 {
                 SMBusy()
                     .transition(.opacity.animation(Animation.easeIn(duration: 1)))
             }
         }
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
-            .padding(isCompact ? .bottom : .all)
+            .padding()
             .disabled(noMetal3)
     }
 }
@@ -111,12 +105,14 @@ struct AdaptiveContent: View {
     var noMetal3: Bool
 
     private var sharedContent: some View {
-        if noMetal3 {
-            return NoMetal3Comfort()
-        } else {
-            return ZStack {
-                SMView()
-                HighlightRaycerOutput()
+        Group {
+            if noMetal3 {
+                NoMetal3Comfort()
+            } else {
+                ZStack {
+                    SMView()
+                    HighlightRaycerOutput()
+                }
             }
         }
     }
