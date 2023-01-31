@@ -76,15 +76,22 @@ struct ContentView: View {
     }
 
     var body: some View {
-        AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
-            .environmentObject(smViewControl)
-            .environmentObject(rendererControl)
-            .background(.black)
-            .onRotate(isPortrait: $isPortrait) { _ in
-                // advance single frame to force redraw
-                smViewControl.control = .framesToRender
-                smViewControl.framesToRender += 1
+        ZStack {
+            AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
+                .environmentObject(smViewControl)
+                .environmentObject(rendererControl)
+                .background(.black)
+                .onRotate(isPortrait: $isPortrait) { _ in
+                    // advance single frame to force redraw
+                    smViewControl.control = .framesToRender
+                    smViewControl.framesToRender += 1
+                }
+
+            if rendererControl.drawLoopEnabled {
+                SMBusy()
+                    .transition(.opacity.animation(Animation.easeIn(duration: 1)))
             }
+        }
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding()
@@ -185,6 +192,18 @@ struct OnRotate: ViewModifier {
 extension View {
     func onRotate(isPortrait: Binding<Bool>, perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
         self.modifier(OnRotate(isPortrait: isPortrait, action: action))
+    }
+}
+
+struct SMBusy: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .foregroundColor(Color(.systemGray5))
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+        }
+        .frame(width: 64, height: 64)
     }
 }
 
