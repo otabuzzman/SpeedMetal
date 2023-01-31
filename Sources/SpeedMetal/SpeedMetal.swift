@@ -62,7 +62,7 @@ struct ContentView: View {
     @StateObject var rendererControl = RendererControl.shared
     @StateObject var smViewControl   = SMViewControl.shared
 
-    @State private var isPortrait = UIScreen.main.bounds.isPortrait
+    @State private var isPortrait = UIScreen.isPortrait
 
     private var noMetal3   = true
     private var noUpscaler = false
@@ -155,11 +155,11 @@ struct AdaptiveContent: View {
 }
 
 extension UIScreen {
-    var isLandscape: Bool {
+    static var isLandscape: Bool {
         get { Self.main.bounds.aspectRatio > 1 }
     }
 
-    var isPortrait: Bool {
+    static var isPortrait: Bool {
         get { !isLandscape }
     }
 }
