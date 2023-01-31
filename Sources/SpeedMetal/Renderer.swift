@@ -71,8 +71,10 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        queue   = device.makeCommandQueue()!
-        library = try! device.makeLibrary(source: shadersMetal, options: MTLCompileOptions())
+        queue = device.makeCommandQueue()!
+
+        let options = MTLCompileOptions()
+        library     = try! device.makeLibrary(source: shadersMetal, options: options)
 
         createBuffers()
         createAccelerationStructures()
@@ -217,7 +219,7 @@ class Renderer: NSObject {
             let geometryIndex = stage.geometries.index(of: instance.geometry)
 
             instanceDescriptors[instanceIndex].accelerationStructureIndex      = UInt32(geometryIndex)
-            instanceDescriptors[instanceIndex].options                         = instance.geometry.intersectionFunctionName.isEmpty ? .opaque : .nonOpaque
+            instanceDescriptors[instanceIndex].options = instance.geometry.intersectionFunctionName.isEmpty ? .opaque : .nonOpaque
             instanceDescriptors[instanceIndex].intersectionFunctionTableOffset = 0
             instanceDescriptors[instanceIndex].mask                            = UInt32(instance.mask)
             instanceDescriptors[instanceIndex].transformationMatrix            = MTLPackedFloat4x3(instance.transform.transpose)
@@ -285,19 +287,11 @@ class Renderer: NSObject {
         descriptor.colorAttachments[0].pixelFormat = .rgba16Float
 
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        do {
-            let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-            try binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
-            // try binaryArchive.serialize(to: URL(string: "shader.metallib")!)
-        } catch {
-            fatalError(String(format: "harvest shader binary archive failed: \(error)"))
-        }
+        let binaryArchive = try! device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try! binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
+        // try! binaryArchive.serialize(to: URL(string: "shader.metallib")!)
 
-        do {
-            shaderPipeline = try device.makeRenderPipelineState(descriptor: descriptor)
-        } catch {
-            fatalError(String(format: "makeRenderPipelineState failed: \(error)"))
-        }
+        shaderPipeline = try! device.makeRenderPipelineState(descriptor: descriptor)
     }
 
     private func makeRaycerPipelineState(withFunction raycerFunction: MTLFunction, intersectionFunctions: [MTLFunction]) -> MTLComputePipelineState {
@@ -315,20 +309,12 @@ class Renderer: NSObject {
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
 
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        do {
-            let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-            try binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
-            // try binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
-        } catch {
-            fatalError(String(format: "harvest raycer binary archive failed: \(error)"))
-        }
+        let binaryArchive = try! device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try! binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
+        // try! binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
 
-        do {
-            pipeline = try device.makeComputePipelineState(
-                descriptor: descriptor, options: MTLPipelineOption(), reflection: nil)
-        } catch {
-            fatalError(String(format: "makeComputePipelineState failed: \(error)"))
-        }
+        let options = MTLPipelineOption()
+        pipeline = try! device.makeComputePipelineState(descriptor: descriptor, options: options, reflection: nil)
 
         return pipeline
     }
@@ -342,11 +328,7 @@ class Renderer: NSObject {
         constants.setConstantValue(&useIntersectionFunctions, type: .bool, index: 1)
         constants.setConstantValue(&usePerPrimitiveData,      type: .bool, index: 2)
 
-        do {
-            function = try library.makeFunction(name: name, constantValues: constants)
-        } catch {
-            fatalError(String(format: "makeFunction failed: \(error)"))
-        }
+        function = try! library.makeFunction(name: name, constantValues: constants)
 
         return function
     }
