@@ -64,6 +64,12 @@ struct ContentView: View {
 
     @State private var isPortrait = UIScreen.isPortrait
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var isCompact: Bool {
+        verticalSizeClass == .compact || horizontalSizeClass == .compact
+    }
+
     private var noMetal3   = true
     private var noUpscaler = false
 
@@ -94,7 +100,7 @@ struct ContentView: View {
         }
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
-            .padding()
+            .padding(isCompact ? .bottom : .all)
             .disabled(noMetal3)
     }
 }
