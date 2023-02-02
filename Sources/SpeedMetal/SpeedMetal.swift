@@ -33,7 +33,6 @@ struct SMView: UIViewRepresentable {
         view.backgroundColor  = .black
         view.colorPixelFormat = .rgba16Float
         view.delegate         = context.coordinator
-        view.preferredFramesPerSecond = 10
         return view
     }
 
@@ -64,6 +63,12 @@ struct ContentView: View {
 
     @State private var isPortrait = UIScreen.isPortrait
 
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    private var isCompact: Bool {
+        verticalSizeClass == .compact || horizontalSizeClass == .compact
+    }
+
     private var noMetal3   = true
     private var noUpscaler = false
 
@@ -82,9 +87,9 @@ struct ContentView: View {
                 .environmentObject(rendererControl)
                 .background(.black)
                 .onRotate(isPortrait: $isPortrait) { _ in
-                    // advance single frame to force redraw
-                    smViewControl.control = .framesToRender
-                    smViewControl.framesToRender += 1
+                    // enable draw loop to force redraw
+                    rendererControl.drawLoopEnabled = true
+                    smViewControl.upscaleFactor     = 1.0
                 }
 
             if rendererControl.drawLoopEnabled && !noMetal3 {
@@ -94,7 +99,7 @@ struct ContentView: View {
         }
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
-            .padding()
+            .padding(isCompact ? .top : .vertical)
             .disabled(noMetal3)
     }
 }
@@ -268,19 +273,20 @@ struct SocialMediaPanel: View {
 struct RendererTimesPanel: View {
     @EnvironmentObject var rendererControl: RendererControl
 
-    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private var isRegular: Bool {
-        sizeClass == .regular
+        verticalSizeClass == .regular && horizontalSizeClass == .regular
     }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("Ausführungszeiten (ms)  ")
+                Text(isRegular ? "Ausführungszeiten (ms)  " : "ms    ")
                     .padding(.bottom, 2)
                     .fontWeight(.bold)
-                Text("GPU (3 Command Buffer) :")
-                Text("Renderer.draw Funktion :")
+                Text(isRegular ? "GPU (3 Command Buffer) :" : "GPU  :")
+                Text(isRegular ? "Renderer.draw Funktion :" : "draw :")
             }
             VStack {
                 Text("\u{03a3}")
