@@ -109,8 +109,6 @@ struct AdaptiveContent: View {
     var isPortrait: Bool
     var noMetal3: Bool
 
-    @State private var smViewError: Bool = false
-
     @ViewBuilder private var smView: some View {
         ZStack {
             SMView()
@@ -338,9 +336,10 @@ struct SMViewError: View {
 
     var body: some View {
         VStack {
-            Image("smview-regular")
+            Image("smview-broken")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
+                .background(.black)
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler. Probiere die App noch einmal zu starten.", isPresented: $isPresented) {} message: {
