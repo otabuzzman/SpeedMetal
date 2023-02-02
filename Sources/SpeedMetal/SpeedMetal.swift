@@ -109,6 +109,8 @@ struct AdaptiveContent: View {
     var isPortrait: Bool
     var noMetal3: Bool
 
+    @State private var smViewError: Bool = false
+
     @ViewBuilder private var smView: some View {
         ZStack {
             SMView()
@@ -325,6 +327,24 @@ struct NoMetal3Comfort: View {
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Dein Device unterstützt die neuen Features von Metal 3 leider nicht.", isPresented: $isPresented) {} message: {
             Text("Den Screenshot im Hintergrund hat die App auf einem iPad Pro 2022 gerendert und dabei den umrahmten Output des Raytracers mit dem Upscaler um Faktor 2 vergrößert.")
+        }
+    }
+}
+
+struct SMViewError: View {
+    var smViewError: RendererError
+
+    @State private var isPresented = true
+
+    var body: some View {
+        VStack {
+            Image("smview-regular")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .alert("Es gab einen Fehler. Probiere die App noch einmal zu starten.", isPresented: $isPresented) {} message: {
+            Text("Fehler im View SMView: \(smViewError.localizedDescription)")
         }
     }
 }

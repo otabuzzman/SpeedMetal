@@ -15,6 +15,17 @@ class RendererControl: ObservableObject {
     @Published var drawFunctionAvg: TimeInterval  = 0
 }
 
+enum RendererError: Error {
+    case apiReturnedNil(String)
+
+    var localizedDescription: String {
+        switch self {
+        case .apiReturnedNil(let api):
+            return "API <\(api)> gab nil zurück."
+        }
+    } 
+}
+
 class Renderer: NSObject {
     private(set) var device: MTLDevice
 
@@ -153,7 +164,7 @@ class Renderer: NSObject {
         uniformsBufferOffset = 0
         uniformsBufferIndex  = 0
 
-        stage.createBuffers()
+        try! stage.createBuffers()
 
         resourcesStride = 0
         for geometry in stage.geometries {

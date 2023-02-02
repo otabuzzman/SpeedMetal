@@ -29,7 +29,7 @@ protocol Geometry {
     init(device: MTLDevice)
 
     func clear()
-    func createBuffers()
+    func createBuffers() throws
     func descriptor() -> MTLAccelerationStructureGeometryDescriptor
     func resources()  -> [MTLResource]
 }
@@ -62,27 +62,27 @@ class TriangleGeometry: Geometry {
         triangles.removeAll()
     }
 
-    func createBuffers() {
-        indexBuffer = device.makeBuffer(
+    func createBuffers() throws {
+        indexBuffer = try device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
-            options: [.storageModeShared])
-        vertexPositionBuffer = device.makeBuffer(
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        vertexPositionBuffer = try device.makeBuffer(
             bytes: &vertices,
             length: vertices.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])
-        vertexNormalBuffer = device.makeBuffer(
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        vertexNormalBuffer = try device.makeBuffer(
             bytes: &normals,
             length: normals.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])
-        vertexColorBuffer = device.makeBuffer(
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        vertexColorBuffer = try device.makeBuffer(
             bytes: &colors,
             length: colors.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared])
-        perPrimitiveDataBuffer = device.makeBuffer(
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        perPrimitiveDataBuffer = try device.makeBuffer(
             bytes: &triangles,
             length: triangles.count * MemoryLayout<Triangle>.stride,
-            options: [.storageModeShared])
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
     }
 
     func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -224,7 +224,7 @@ class SphereGeometry: Geometry {
         spheres.removeAll()
     }
 
-    func createBuffers() {
+    func createBuffers() throws {
         var boundingBoxes = [BoundingBox]()
 
         for sphere in spheres {
@@ -241,14 +241,14 @@ class SphereGeometry: Geometry {
             boundingBoxes.append(bounds)
         }
 
-        sphereBuffer = device.makeBuffer(
+        sphereBuffer = try device.makeBuffer(
             bytes: &spheres,
             length: spheres.count * MemoryLayout<Sphere>.stride,
-            options: [.storageModeShared])
-        boundingBoxBuffer = device.makeBuffer(
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        boundingBoxBuffer = try device.makeBuffer(
             bytes: &boundingBoxes,
             length: spheres.count * MemoryLayout<BoundingBox>.stride,
-            options: [.storageModeShared])
+            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
     }
 
     func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -427,9 +427,9 @@ class Stage {
         lights.removeAll()
     }
 
-    func createBuffers() {
+    func createBuffers() throws {
         for geometry in geometries {
-            (geometry as! Geometry).createBuffers()
+            try (geometry as! Geometry).createBuffers()
         }
 
         lightBuffer = device.makeBuffer(
