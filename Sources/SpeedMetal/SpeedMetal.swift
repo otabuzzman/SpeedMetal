@@ -109,16 +109,13 @@ struct AdaptiveContent: View {
     var isPortrait: Bool
     var noMetal3: Bool
 
-    private var sharedContent: some View {
-        Group {
-            if noMetal3 {
-                NoMetal3Comfort()
-            } else {
-                ZStack {
-                    SMView()
-                    HighlightRaycerOutput()
-                }
-            }
+    @ViewBuilder private var smView: some View {
+        ZStack {
+            SMView()
+            HighlightRaycerOutput()
+        }
+        .substitute(if: noMetal3) {
+            NoMetal3Comfort()
         }
     }
 
@@ -130,7 +127,7 @@ struct AdaptiveContent: View {
                 RendererTimesPanel()
                     .padding()
 
-                sharedContent
+                smView
             }
         } else {
             HStack {
@@ -142,7 +139,7 @@ struct AdaptiveContent: View {
                     Spacer()
                 }
 
-                sharedContent
+                smView
 
                 VStack {
                     SocialMediaPanel()
@@ -197,8 +194,16 @@ struct OnRotate: ViewModifier {
 }
 
 extension View {
-    func onRotate(isPortrait: Binding<Bool>, perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
+    func onRotate(isPortrait: Binding<Bool>, action: @escaping (UIDeviceOrientation) -> Void) -> some View {
         self.modifier(OnRotate(isPortrait: isPortrait, action: action))
+    }
+
+    @ViewBuilder func substitute(if condition: Bool, content: () -> some View) -> some View {
+        if condition {
+            content()
+        } else {
+            self
+        }
     }
 }
 
