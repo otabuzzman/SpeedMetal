@@ -42,10 +42,10 @@ class Renderer: NSObject {
     private var frameCount: UInt32 = 0
 
     private let maxFramesInFlight = 3
-    private var maxFramesSignal: DispatchSemaphore
+    private var maxFramesSignal: DispatchSemaphore!
 
-    private var queue:   MTLCommandQueue
-    private var library: MTLLibrary
+    private var queue:   MTLCommandQueue!
+    private var library: MTLLibrary!
 
     private var uniformsBuffer: MTLBuffer!
     private var uniformsBufferOffset = 0
@@ -82,10 +82,11 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        queue = device.makeCommandQueue()!
+        queue = try device.makeCommandQueue() ??
+        { throw RendererError.apiReturnedNil("makeCommandQueue") }()
 
         let options = MTLCompileOptions()
-        library     = try! device.makeLibrary(source: shadersMetal, options: options)
+        library     = try device.makeLibrary(source: shadersMetal, options: options)
 
         try createBuffers()
         createAccelerationStructures()

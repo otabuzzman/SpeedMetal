@@ -17,39 +17,62 @@ class SMViewControl: ObservableObject {
     @Published var lineUp  = LineUp.threeByThree
     @Published var framesToRender: UInt32 = 1
     @Published var upscaleFactor: Float   = 1.0
+    @Published var exception = ""
 }
 
 struct SMView: UIViewRepresentable {
+    @EnvironmentObject var rendererControl: RendererControl
     @EnvironmentObject var smViewControl: SMViewControl
 
-    func makeCoordinator() -> Renderer {
+    func makeCoordinator() -> Renderer? {
         let device = MTLCreateSystemDefaultDevice()!
         let stage  = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: device)
-        return try! Renderer(stage: stage, device: device)
+
+        var renderer: Renderer? = nil
+        do {
+            renderer = try Renderer(stage: stage, device: device)
+        } catch let error as RendererError {
+            rendererControl.drawLoopEnabled = false
+            smViewControl.exception = error.localizedDescription
+        } catch {
+            rendererControl.drawLoopEnabled = false
+            smViewControl.exception = error.localizedDescription
+        }
+
+        return renderer
     }
 
     func makeUIView(context: Context) -> MTKView {
-        let view = MTKView(frame: .zero, device: context.coordinator.device)
+        guard
+            let renderer = context.coordinator
+        else { return MTKView() }
+
+        let view = MTKView(frame: .zero, device: renderer.device)
         view.backgroundColor  = .black
         view.colorPixelFormat = .rgba16Float
-        view.delegate         = context.coordinator
+        view.delegate         = renderer
+
         return view
     }
 
     func updateUIView(_ view: MTKView, context: Context) {
+        guard
+            let renderer = context.coordinator
+        else { return }
+
         switch smViewControl.control {
         case .none:
             return
         case .lineUp:
             let stage = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: view.device!)
-            context.coordinator.framesToRender = 1
-            context.coordinator.stage          = stage
+            renderer.framesToRender = 1
+            renderer.stage          = stage
             smViewControl.framesToRender = 1
         case .framesToRender:
-            context.coordinator.framesToRender = smViewControl.framesToRender
+            renderer.framesToRender = smViewControl.framesToRender
         case .upscaleFactor:
-            context.coordinator.framesToRender = 1
-            context.coordinator.upscaleFactor  = smViewControl.upscaleFactor
+            renderer.framesToRender = 1
+            renderer.upscaleFactor  = smViewControl.upscaleFactor
             smViewControl.framesToRender = 1
         }
         smViewControl.control = .none // prevent last command running after Renderer updated Bindings
@@ -100,7 +123,7 @@ struct ContentView: View {
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding(isCompact ? .top : .vertical)
-            .disabled(noMetal3)
+            .disabled(noMetal3 || !smViewControl.exception.isEmpty)
     }
 }
 
@@ -109,6 +132,8 @@ struct AdaptiveContent: View {
     var isPortrait: Bool
     var noMetal3: Bool
 
+    @EnvironmentObject var smViewControl: SMViewControl
+
     @ViewBuilder private var smView: some View {
         ZStack {
             SMView()
@@ -116,6 +141,9 @@ struct AdaptiveContent: View {
         }
         .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
+        }
+        .substitute(if: !smViewControl.exception.isEmpty) { _ in
+            SMViewError()
         }
     }
 
@@ -330,7 +358,7 @@ struct NoMetal3Comfort: View {
 }
 
 struct SMViewError: View {
-    var smViewError: RendererError
+    @EnvironmentObject var smViewControl: SMViewControl
 
     @State private var isPresented = true
 
@@ -342,7 +370,7 @@ struct SMViewError: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler. Starte die App nochmal oder boote dein Device.", isPresented: $isPresented) {} message: {
-            Text("Fehler im View SMView: \(smViewError.localizedDescription)")
+            Text("SMView: \(smViewControl.exception)")
         }
     }
 }
