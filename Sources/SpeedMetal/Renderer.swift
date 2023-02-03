@@ -21,7 +21,7 @@ enum RendererError: Error {
     var localizedDescription: String {
         switch self {
         case .apiReturnedNil(let api):
-            return "API <\(api)> gab nil zurück."
+            return "API gab nil zurück : \(api)"
         }
     } 
 }
@@ -42,10 +42,10 @@ class Renderer: NSObject {
     private var frameCount: UInt32 = 0
 
     private let maxFramesInFlight = 3
-    private var maxFramesSignal: DispatchSemaphore!
+    private var maxFramesSignal: DispatchSemaphore
 
-    private var queue:   MTLCommandQueue!
-    private var library: MTLLibrary!
+    private var queue:   MTLCommandQueue
+    private var library: MTLLibrary
 
     private var uniformsBuffer: MTLBuffer!
     private var uniformsBufferOffset = 0
@@ -75,7 +75,7 @@ class Renderer: NSObject {
     private var commandBufferSum: TimeInterval = 0
     private var drawFunctionSum: TimeInterval  = 0
 
-    init(stage: Stage, device: MTLDevice) {
+    init(stage: Stage, device: MTLDevice) throws {
         self.stage  = stage
         self.device = device
         super.init()
@@ -87,7 +87,7 @@ class Renderer: NSObject {
         let options = MTLCompileOptions()
         library     = try! device.makeLibrary(source: shadersMetal, options: options)
 
-        createBuffers()
+        try createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
     }
@@ -98,7 +98,7 @@ class Renderer: NSObject {
         commandBufferSum = 0
         drawFunctionSum  = 0
 
-        createBuffers()
+        try! createBuffers()
         createAccelerationStructures()
         createRaycerAndShaderPipelines()
 
@@ -155,7 +155,7 @@ class Renderer: NSObject {
         uniforms.pointee.camera.up       = up * imagePlaneHeight
     }
 
-    private func createBuffers() {
+    private func createBuffers() throws {
         let uniformsBufferSize = alignedUniformsSize * maxFramesInFlight
         uniformsBuffer = device.makeBuffer(
             length: uniformsBufferSize,
@@ -164,7 +164,7 @@ class Renderer: NSObject {
         uniformsBufferOffset = 0
         uniformsBufferIndex  = 0
 
-        try! stage.createBuffers()
+        try stage.createBuffers()
 
         resourcesStride = 0
         for geometry in stage.geometries {
@@ -297,10 +297,11 @@ class Renderer: NSObject {
         descriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
         descriptor.colorAttachments[0].pixelFormat = .rgba16Float
 
+        // experimental
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try! device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try! binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
-        // try! binaryArchive.serialize(to: URL(string: "shader.metallib")!)
+        let binaryArchive = try? device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try? binaryArchive?.addRenderPipelineFunctions(descriptor: descriptor)
+        try? binaryArchive?.serialize(to: URL(string: "shader.metallib")!)
 
         shaderPipeline = try! device.makeRenderPipelineState(descriptor: descriptor)
     }
@@ -319,10 +320,11 @@ class Renderer: NSObject {
         descriptor.linkedFunctions                                 = linkedFunctions
         descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
 
+        // experimental
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try! device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try! binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
-        // try! binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
+        let binaryArchive = try? device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try? binaryArchive?.addComputePipelineFunctions(descriptor: descriptor)
+        try? binaryArchive?.serialize(to: URL(string: "raycer.metallib")!)
 
         let options = MTLPipelineOption()
         pipeline = try! device.makeComputePipelineState(descriptor: descriptor, options: options, reflection: nil)

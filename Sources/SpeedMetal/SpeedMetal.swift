@@ -25,7 +25,7 @@ struct SMView: UIViewRepresentable {
     func makeCoordinator() -> Renderer {
         let device = MTLCreateSystemDefaultDevice()!
         let stage  = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: device)
-        return Renderer(stage: stage, device: device)
+        return try! Renderer(stage: stage, device: device)
     }
 
     func makeUIView(context: Context) -> MTKView {
@@ -114,7 +114,7 @@ struct AdaptiveContent: View {
             SMView()
             HighlightRaycerOutput()
         }
-        .substitute(if: noMetal3) {
+        .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
         }
     }
@@ -198,9 +198,9 @@ extension View {
         self.modifier(OnRotate(isPortrait: isPortrait, action: action))
     }
 
-    @ViewBuilder func substitute(if condition: Bool, content: () -> some View) -> some View {
+    @ViewBuilder func substitute(if condition: Bool, content: (Self) -> some View) -> some View {
         if condition {
-            content()
+            content(self)
         } else {
             self
         }
@@ -339,10 +339,9 @@ struct SMViewError: View {
             Image("smview-broken")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .background(.black)
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-        .alert("Es gab einen Fehler. Probiere die App noch einmal zu starten.", isPresented: $isPresented) {} message: {
+        .alert("Es gab einen Fehler. Starte die App nochmal oder boote dein Device.", isPresented: $isPresented) {} message: {
             Text("Fehler im View SMView: \(smViewError.localizedDescription)")
         }
     }
