@@ -17,7 +17,7 @@ class SMViewControl: ObservableObject {
     @Published var lineUp  = LineUp.threeByThree
     @Published var framesToRender: UInt32 = 1
     @Published var upscaleFactor: Float   = 1.0
-    @Published var exception = ""
+    @Published var error = ""
 }
 
 struct SMView: UIViewRepresentable {
@@ -31,12 +31,8 @@ struct SMView: UIViewRepresentable {
         var renderer: Renderer? = nil
         do {
             renderer = try Renderer(stage: stage, device: device)
-        } catch let error as RendererError {
-            rendererControl.drawLoopEnabled = false
-            smViewControl.exception = error.localizedDescription
         } catch {
-            rendererControl.drawLoopEnabled = false
-            smViewControl.exception = error.localizedDescription
+            smViewControl.error = error.localizedDescription
         }
 
         return renderer
@@ -76,7 +72,8 @@ struct SMView: UIViewRepresentable {
             smViewControl.framesToRender = 1
         }
         smViewControl.control = .none // prevent last command running after Renderer updated Bindings
-        view.isPaused = false
+        rendererControl.drawLoopEnabled = true
+        view.isPaused                   = false
     }
 }
 
@@ -110,9 +107,8 @@ struct ContentView: View {
                 .environmentObject(rendererControl)
                 .background(.black)
                 .onRotate(isPortrait: $isPortrait) { _ in
-                    // enable draw loop to force redraw
-                    rendererControl.drawLoopEnabled = true
-                    smViewControl.upscaleFactor     = 1.0
+                    smViewControl.upscaleFactor = 1.0
+                    smViewControl.control = .upscaleFactor
                 }
 
             if rendererControl.drawLoopEnabled && !noMetal3 {
@@ -123,7 +119,7 @@ struct ContentView: View {
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding(isCompact ? .top : .vertical)
-            .disabled(noMetal3 || !smViewControl.exception.isEmpty)
+            .disabled(noMetal3 || !smViewControl.error.isEmpty)
     }
 }
 
@@ -142,7 +138,7 @@ struct AdaptiveContent: View {
         .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
         }
-        .substitute(if: !smViewControl.exception.isEmpty) { _ in
+        .substitute(if: !smViewControl.error.isEmpty) { _ in
             SMViewError()
         }
     }
@@ -370,7 +366,7 @@ struct SMViewError: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler. Starte die App nochmal oder boote dein Device.", isPresented: $isPresented) {} message: {
-            Text("SMView: \(smViewControl.exception)")
+            Text("SMView: \(smViewControl.error)")
         }
     }
 }

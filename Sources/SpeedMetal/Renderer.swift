@@ -8,7 +8,7 @@ class RendererControl: ObservableObject {
     static let shared = RendererControl()
     private init() {}
 
-    @Published var drawLoopEnabled = true
+    @Published var drawLoopEnabled = false
     @Published var commandBufferSum: TimeInterval = 0
     @Published var commandBufferAvg: TimeInterval = 0
     @Published var drawFunctionSum: TimeInterval  = 0
@@ -31,7 +31,7 @@ class Renderer: NSObject {
 
     // options
     var stage: Stage!                { didSet { resetStage() } }
-    var framesToRender: UInt32 = 1   { didSet { RendererControl.shared.drawLoopEnabled = true } }
+    var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
 
@@ -95,7 +95,6 @@ class Renderer: NSObject {
 
     private func resetStage() {
         frameCount = 0
-        RendererControl.shared.drawLoopEnabled  = true
         commandBufferSum = 0
         drawFunctionSum  = 0
 
@@ -117,7 +116,6 @@ class Renderer: NSObject {
 
     private func resetUpscaler() {
         frameCount = 0
-        RendererControl.shared.drawLoopEnabled  = true
         commandBufferSum = 0
         drawFunctionSum  = 0
 
@@ -463,9 +461,6 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
-        if !RendererControl.shared.drawLoopEnabled {
-            return
-        }
         maxFramesSignal.wait()
 
         let t0 = CFAbsoluteTimeGetCurrent()
