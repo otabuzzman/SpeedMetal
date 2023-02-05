@@ -14,10 +14,12 @@ class SMViewControl: ObservableObject {
     }
 
     @Published var control = SMViewCommand.none
-    @Published var lineUp  = LineUp.threeByThree
-    @Published var framesToRender: UInt32 = 1
-    @Published var upscaleFactor: Float   = 1.0
+    var lineUp  = LineUp.threeByThree
+    var framesToRender: UInt32 = 1
+    var upscaleFactor: Float   = 1.0
     @Published var error = ""
+    var noMetal3   = true
+    var noUpscaler = true
 }
 
 struct SMView: UIViewRepresentable {
@@ -89,20 +91,17 @@ struct ContentView: View {
         verticalSizeClass == .compact || horizontalSizeClass == .compact
     }
 
-    private var noMetal3   = true
-    private var noUpscaler = false
-
     init() {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
         let device = MTLCreateSystemDefaultDevice()!
-        noMetal3   = !device.supportsFamily(.metal3)
-        noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
+        smViewControl.noMetal3 = !device.supportsFamily(.metal3)
+        smViewControl.noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
     var body: some View {
         ZStack {
-            AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
+            AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait)
                 .environmentObject(smViewControl)
                 .environmentObject(rendererControl)
                 .background(.black)
@@ -111,22 +110,21 @@ struct ContentView: View {
                     smViewControl.control = .upscaleFactor
                 }
 
-            if rendererControl.drawLoopEnabled && !noMetal3 {
+            if rendererControl.drawLoopEnabled && !smViewControl.noMetal3 {
                 SMBusy()
                     .transition(.opacity.animation(Animation.easeIn(duration: 1)))
             }
         }
 
-        FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
+        FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled)
             .padding(isCompact ? .top : .vertical)
-            .disabled(noMetal3 || !smViewControl.error.isEmpty)
+            .disabled(smViewControl.noMetal3 || !smViewControl.error.isEmpty)
     }
 }
 
 struct AdaptiveContent: View {
     var title: String
     var isPortrait: Bool
-    var noMetal3: Bool
 
     @EnvironmentObject var smViewControl: SMViewControl
 
@@ -135,7 +133,7 @@ struct AdaptiveContent: View {
             SMView()
             HighlightRaycerOutput()
         }
-        .substitute(if: noMetal3) { _ in
+        .substitute(if: smViewControl.noMetal3) { _ in
             NoMetal3Comfort()
         }
         .substitute(if: !smViewControl.error.isEmpty) { _ in
@@ -393,7 +391,6 @@ struct HighlightRaycerOutput: View {
 struct FlightControlPanel: View {
     var smViewControl: SMViewControl
     var drawLoopEnabled: Bool
-    var noUpscaler: Bool
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isRegular: Bool {
@@ -465,7 +462,7 @@ struct FlightControlPanel: View {
                     UpscalerIcon()
                         .frame(width: iconSize, height: iconSize)
                 }
-                .disabled(noUpscaler || drawLoopEnabled)
+                .disabled(smViewControl.noUpscaler || drawLoopEnabled)
             }
         }
     }
