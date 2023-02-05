@@ -30,7 +30,7 @@ class Renderer: NSObject {
     private(set) var device: MTLDevice
 
     // options
-    var stage: Stage!                { didSet { resetStage() } }
+    var stage: Stage                 { didSet { resetStage() } }
     var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
@@ -82,9 +82,7 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        queue = try device.makeCommandQueue() ??
-        { throw RendererError.apiReturnedNil("makeCommandQueue") }()
-
+        queue = try device.makeCommandQueue() ?? { throw RendererError.apiReturnedNil("makeCommandQueue") }()
         let options = MTLCompileOptions()
         library     = try device.makeLibrary(source: shadersMetal, options: options)
 
@@ -111,7 +109,6 @@ class Renderer: NSObject {
                 withBytes: zeroes,
                 bytesPerRow: MemoryLayout<vector_float4>.size * raycerWidth)
         }
-
     }
 
     private func resetUpscaler() {
