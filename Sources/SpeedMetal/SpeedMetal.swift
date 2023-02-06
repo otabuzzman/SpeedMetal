@@ -18,8 +18,6 @@ class SMViewControl: ObservableObject {
     var framesToRender: UInt32 = 1
     var upscaleFactor: Float   = 1.0
     @Published var error = ""
-    var noMetal3   = true
-    var noUpscaler = true
 }
 
 struct SMView: UIViewRepresentable {
@@ -30,25 +28,20 @@ struct SMView: UIViewRepresentable {
         let device = MTLCreateSystemDefaultDevice()!
         let stage  = Stage.hoistCornellBox(lineUp: smViewControl.lineUp, device: device)
 
-        var renderer: Renderer? = nil
         do {
-            renderer = try Renderer(stage: stage, device: device)
+            return try Renderer(stage: stage, device: device)
         } catch {
             smViewControl.error = error.localizedDescription
         }
 
-        return renderer
+        return nil
     }
 
     func makeUIView(context: Context) -> MTKView {
-        guard
-            let renderer = context.coordinator
-        else { return MTKView() }
-
-        let view = MTKView(frame: .zero, device: renderer.device)
+        let view = MTKView(frame: .zero, device: context.coordinator?.device)
         view.backgroundColor  = .black
         view.colorPixelFormat = .rgba16Float
-        view.delegate         = renderer
+        view.delegate         = context.coordinator
 
         return view
     }
@@ -91,17 +84,20 @@ struct ContentView: View {
         verticalSizeClass == .compact || horizontalSizeClass == .compact
     }
 
+    private var noMetal3   = true
+    private var noUpscaler = true
+
     init() {
         // should work safely on modern devices
         // and in simulator from Xcode 11 onwards
         let device = MTLCreateSystemDefaultDevice()!
-        smViewControl.noMetal3 = !device.supportsFamily(.metal3)
-        smViewControl.noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
+        noMetal3 = !device.supportsFamily(.metal3)
+        noUpscaler = !MTLFXSpatialScalerDescriptor.supportsDevice(device)
     }
 
     var body: some View {
         ZStack {
-            AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait)
+            AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
                 .environmentObject(smViewControl)
                 .environmentObject(rendererControl)
                 .background(.black)
@@ -110,21 +106,22 @@ struct ContentView: View {
                     smViewControl.control = .upscaleFactor
                 }
 
-            if rendererControl.drawLoopEnabled && !smViewControl.noMetal3 {
+            if rendererControl.drawLoopEnabled && !noMetal3 {
                 SMBusy()
                     .transition(.opacity.animation(Animation.easeIn(duration: 1)))
             }
         }
 
-        FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled)
+        FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding(isCompact ? .top : .vertical)
-            .disabled(smViewControl.noMetal3 || !smViewControl.error.isEmpty)
+            .disabled(noMetal3 || !smViewControl.error.isEmpty)
     }
 }
 
 struct AdaptiveContent: View {
     var title: String
     var isPortrait: Bool
+    var noMetal3: Bool
 
     @EnvironmentObject var smViewControl: SMViewControl
 
@@ -133,7 +130,7 @@ struct AdaptiveContent: View {
             SMView()
             HighlightRaycerOutput()
         }
-        .substitute(if: smViewControl.noMetal3) { _ in
+        .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
         }
         .substitute(if: !smViewControl.error.isEmpty) { _ in
@@ -391,6 +388,7 @@ struct HighlightRaycerOutput: View {
 struct FlightControlPanel: View {
     var smViewControl: SMViewControl
     var drawLoopEnabled: Bool
+    var noUpscaler: Bool
 
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isRegular: Bool {
@@ -462,7 +460,7 @@ struct FlightControlPanel: View {
                     UpscalerIcon()
                         .frame(width: iconSize, height: iconSize)
                 }
-                .disabled(smViewControl.noUpscaler || drawLoopEnabled)
+                .disabled(noUpscaler || drawLoopEnabled)
             }
         }
     }
