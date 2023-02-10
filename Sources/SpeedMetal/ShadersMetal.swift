@@ -407,6 +407,12 @@ kernel void raycerKernel(
             else
                 intersection = i.intersect(ray, accelerationStructure, bounce == 0 ? RAY_MASK_PRIMARY : RAY_MASK_SECONDARY);
 
+/*
+            if (intersection.type == intersection_type::none && bounce == 0) {
+                accumulatedColor = float3(1.0f, 1.0f, 1.0f);
+                break;
+            }
+*/
             // Stop if the ray didn't hit anything and has bounced out of the scene.
             if (intersection.type == intersection_type::none)
                 break;

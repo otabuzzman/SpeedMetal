@@ -270,7 +270,7 @@ class SphereGeometry: Geometry {
 
     func addSphere(withOrigin origin: vector_float3, radius: Float, color: vector_float3) {
         let sphere = Sphere(
-            origin:  MTLPackedFloat3(origin),
+            origin: MTLPackedFloat3(origin),
             radiusSquared: radius * radius,
             color: MTLPackedFloat3(color),
             radius: radius)
@@ -314,6 +314,17 @@ class Stage {
         self.device = device
     }
 
+    // 0.769, 0.890, 0.964
+    // 0.960, 0.890, 0.984
+    // 0.960, 0.832, 0.882
+    // 0.906, 0.710, 0.808
+    // 0.980, 0.058, 0.406
+    // 0.019, 0.300, 0.671
+    // 0.531, 0.003, 0.699
+    // 0.730, 0.164, 0.609
+    // 0.675, 0.273, 0.917
+    // 0.996, 0.429, 0.640
+
     class func hoistCornellBox(lineUp: LineUp = .threeByThree, device: MTLDevice) -> Stage {
         let stage = Stage(device: device)
 
@@ -335,17 +346,17 @@ class Stage {
 
         geometryMesh.addCube(
             withFaces: FACE_MASK_NEGATIVE_Y | FACE_MASK_POSITIVE_Y | FACE_MASK_NEGATIVE_Z,
-            color: vector_float3(0.725, 0.71, 0.68),
+            color: vector_float3(0.960, 0.890, 0.984),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
             withFaces: FACE_MASK_NEGATIVE_X,
-            color: vector_float3(0.63, 0.065, 0.05),
+            color: vector_float3(5, 0.058, 0.406),
             transform: transform,
             inwardNormals: true)
         geometryMesh.addCube(
             withFaces: FACE_MASK_POSITIVE_X,
-            color: vector_float3(0.14, 0.45, 0.091),
+            color: vector_float3(0.019, 0.300, 5),
             transform: transform,
             inwardNormals: true)
 
@@ -363,7 +374,7 @@ class Stage {
         sphereGeometry.addSphere(
             withOrigin: vector_float3(0.3275, 0.3, 0.3725),
             radius: 0.3,
-            color: vector_float3(0.725, 0.71, 0.68))
+            color: vector_float3(4, 0.273, 3))
 
         let hoistInstances = { (_ x: Float, _ y: Float) -> () in
             transform = matrix4x4_translation(x * 2.5, y * 2.5, 0.0)

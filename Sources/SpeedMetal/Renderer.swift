@@ -506,7 +506,7 @@ extension Renderer: MTKViewDelegate {
         computeEncoder.endEncoding()
 
         raycerTargets.swapAt(0, 1)
-
+/*
         if upscaleFactor > 1.0 {
             spatialUpscaler.colorTexture  = raycerTargets[0]
             spatialUpscaler.outputTexture = upscaledTarget
@@ -525,7 +525,7 @@ extension Renderer: MTKViewDelegate {
                 destinationOrigin: MTLOriginMake(0, 0, 0))
             blitEncoder.endEncoding()
         }
-
+*/
         if let currentDrawable = view.currentDrawable {
             let renderPassDescriptor = MTLRenderPassDescriptor()
             renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
@@ -534,11 +534,14 @@ extension Renderer: MTKViewDelegate {
 
             let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
             renderEncoder.setRenderPipelineState(shaderPipeline)
+/*
             if upscaleFactor > 1.0 {
                 renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
             } else {
                 renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
             }
+*/
+            renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
 
             renderEncoder.endEncoding()

@@ -128,7 +128,7 @@ struct AdaptiveContent: View {
     @ViewBuilder private var smView: some View {
         ZStack {
             SMView()
-            HighlightRaycerOutput()
+//            HighlightRaycerOutput()
         }
         .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
