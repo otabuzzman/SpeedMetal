@@ -2,6 +2,20 @@ import MetalKit
 import MetalFX
 import SwiftUI
 
+struct ErrorWrapper {
+    var error: RendererError
+    var guidance: String
+}
+
+class ErrorHandler: ObservableObject {
+    @Published var current: ErrorWrapper! { didSet { isError = true } }
+    var isError = false
+
+    func record(_ error: RendererError, _ guidance: String) {
+        current = ErrorWrapper(error: error, guidance: guidance)
+    }
+}
+
 class SMViewControl: ObservableObject {
     static let shared = SMViewControl()
     private init() {}
@@ -17,12 +31,12 @@ class SMViewControl: ObservableObject {
     var lineUp  = LineUp.threeByThree
     var framesToRender: UInt32 = 1
     var upscaleFactor: Float   = 1.0
-    @Published var error = ""
 }
 
 struct SMView: UIViewRepresentable {
     @EnvironmentObject var rendererControl: RendererControl
     @EnvironmentObject var smViewControl: SMViewControl
+    @EnvironmentObject var errorHandler: ErrorHandler
 
     func makeCoordinator() -> Renderer? {
         let device = MTLCreateSystemDefaultDevice()!
@@ -30,9 +44,9 @@ struct SMView: UIViewRepresentable {
 
         do {
             return try Renderer(stage: stage, device: device)
-        } catch {
-            smViewControl.error = error.localizedDescription
-        }
+        } catch let error as RendererError {
+            errorHandler.record(error, "")
+        } catch {}
 
         return nil
     }
@@ -75,6 +89,7 @@ struct SMView: UIViewRepresentable {
 struct ContentView: View {
     @StateObject var rendererControl = RendererControl.shared
     @StateObject var smViewControl   = SMViewControl.shared
+    @StateObject var errorHandler    = ErrorHandler()
 
     @State private var isPortrait = UIScreen.isPortrait
 
@@ -100,6 +115,7 @@ struct ContentView: View {
             AdaptiveContent(title: "SpeedMetal", isPortrait: isPortrait, noMetal3: noMetal3)
                 .environmentObject(smViewControl)
                 .environmentObject(rendererControl)
+                .environmentObject(errorHandler)
                 .background(.black)
                 .onRotate(isPortrait: $isPortrait) { _ in
                     smViewControl.upscaleFactor = 1.0
@@ -114,7 +130,7 @@ struct ContentView: View {
 
         FlightControlPanel(smViewControl: smViewControl, drawLoopEnabled: rendererControl.drawLoopEnabled, noUpscaler: noUpscaler)
             .padding(isCompact ? .top : .vertical)
-            .disabled(noMetal3 || !smViewControl.error.isEmpty)
+            .disabled(noMetal3 || errorHandler.isError)
     }
 }
 
@@ -123,7 +139,7 @@ struct AdaptiveContent: View {
     var isPortrait: Bool
     var noMetal3: Bool
 
-    @EnvironmentObject var smViewControl: SMViewControl
+    @EnvironmentObject var errorHandler: ErrorHandler
 
     @ViewBuilder private var smView: some View {
         ZStack {
@@ -133,8 +149,8 @@ struct AdaptiveContent: View {
         .substitute(if: noMetal3) { _ in
             NoMetal3Comfort()
         }
-        .substitute(if: !smViewControl.error.isEmpty) { _ in
-            SMViewError()
+        .substitute(if: errorHandler.isError) { _ in
+            SMViewError(errorHandler: errorHandler)
         }
     }
 
@@ -349,7 +365,7 @@ struct NoMetal3Comfort: View {
 }
 
 struct SMViewError: View {
-    @EnvironmentObject var smViewControl: SMViewControl
+    var errorHandler: ErrorHandler
 
     @State private var isPresented = true
 
@@ -361,7 +377,7 @@ struct SMViewError: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler. Starte die App nochmal oder boote dein Device.", isPresented: $isPresented) {} message: {
-            Text("SMView: \(smViewControl.error)")
+            Text(errorHandler.current.error.localizedDescription)
         }
     }
 }
