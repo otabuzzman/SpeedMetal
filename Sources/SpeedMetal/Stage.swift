@@ -270,7 +270,7 @@ class SphereGeometry: Geometry {
 
     func addSphere(withOrigin origin: vector_float3, radius: Float, color: vector_float3) {
         let sphere = Sphere(
-            origin:  MTLPackedFloat3(origin),
+            origin: MTLPackedFloat3(origin),
             radiusSquared: radius * radius,
             color: MTLPackedFloat3(color),
             radius: radius)
