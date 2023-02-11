@@ -9,7 +9,7 @@ struct ErrorWrapper {
 
 class ErrorHandler: ObservableObject {
     @Published var current: ErrorWrapper! { didSet { isError = true } }
-    var isError = false
+    @Published var isError = false
 
     func record(_ error: RendererError, _ guidance: String) {
         current = ErrorWrapper(error: error, guidance: guidance)
@@ -45,7 +45,7 @@ struct SMView: UIViewRepresentable {
         do {
             return try Renderer(stage: stage, device: device)
         } catch let error as RendererError {
-            errorHandler.record(error, "")
+            errorHandler.record(error, "Die Ursache könnte ein vorübergehender Ressourcenengpass sein. Starte die App nochmal oder boote dein Device.")
         } catch {}
 
         return nil
@@ -376,8 +376,8 @@ struct SMViewError: View {
                 .aspectRatio(contentMode: .fit)
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-        .alert("Es gab einen Fehler. Starte die App nochmal oder boote dein Device.", isPresented: $isPresented) {} message: {
-            Text(errorHandler.current.error.localizedDescription)
+        .alert("Es gab einen Fehler : \(errorHandler.current.error.localizedDescription)", isPresented: $isPresented) {} message: {
+            Text(errorHandler.current.guidance)
         }
     }
 }
