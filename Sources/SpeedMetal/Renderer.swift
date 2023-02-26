@@ -17,11 +17,14 @@ class RendererControl: ObservableObject {
 
 enum RendererError: Error {
     case apiReturnedNil(String)
+    case apiThrewException(Error)
 
     var localizedDescription: String {
         switch self {
         case .apiReturnedNil(let api):
-            return "API gab nil zurück : \(api)"
+            return "API gibt nil zurück : \(api)"
+        case .apiThrewException(let exception):
+            return "API meldet Ausnahme : \(exception)"
         }
     } 
 }
@@ -30,7 +33,7 @@ class Renderer: NSObject {
     private(set) var device: MTLDevice
 
     // options
-    var stage: Stage                 { didSet { resetStage() } }
+    var stage: Stage                 { didSet { try! resetStage() } }
     var framesToRender: UInt32 = 1
     var usePerPrimitiveData    = true
     var upscaleFactor: Float   = 1.0 { didSet { resetUpscaler() } }
@@ -87,18 +90,18 @@ class Renderer: NSObject {
         library     = try device.makeLibrary(source: shadersMetal, options: options)
 
         try createBuffers()
-        createAccelerationStructures()
-        createRaycerAndShaderPipelines()
+        try createAccelerationStructures()
+        try createRaycerAndShaderPipelines()
     }
 
-    private func resetStage() {
+    private func resetStage() throws {
         frameCount = 0
         commandBufferSum = 0
         drawFunctionSum  = 0
 
-        try! createBuffers()
-        createAccelerationStructures()
-        createRaycerAndShaderPipelines()
+        try createBuffers()
+        try createAccelerationStructures()
+        try createRaycerAndShaderPipelines()
 
         let zeroes = Array<vector_float4>(repeating: .zero, count: raycerWidth * raycerHeight)
 
@@ -199,7 +202,7 @@ class Renderer: NSObject {
         }
     }
 
-    private func createAccelerationStructures() {
+    private func createAccelerationStructures() throws {
         primitiveAccelerationStructures = []
 
         for geometryIndex in 0..<stage.geometries.count {
@@ -211,7 +214,7 @@ class Renderer: NSObject {
             let descriptor = MTLPrimitiveAccelerationStructureDescriptor()
             descriptor.geometryDescriptors = [geometryDescriptor]
 
-            let accelerationStructure = makeAccelerationStructure(descriptor: descriptor)
+            let accelerationStructure = try makeAccelerationStructure(descriptor: descriptor)
             primitiveAccelerationStructures.add(accelerationStructure)
         }
 
@@ -237,10 +240,10 @@ class Renderer: NSObject {
         descriptor.instanceCount                   = stage.instances.count
         descriptor.instanceDescriptorBuffer        = instanceBuffer
 
-        instanceAccelerationStructure = makeAccelerationStructure(descriptor: descriptor)
+        instanceAccelerationStructure = try makeAccelerationStructure(descriptor: descriptor)
     }
 
-    private func createRaycerAndShaderPipelines() {
+    private func createRaycerAndShaderPipelines() throws {
         for geometry in stage.geometries {
             if !(geometry as! Geometry).intersectionFunctionName.isEmpty {
                 useIntersectionFunctions = true
@@ -258,13 +261,13 @@ class Renderer: NSObject {
             if let _ = intersectionFunctions.index(forKey: geometry.intersectionFunctionName) {
                 continue
             }
-            let intersectionFunction = makeSpecializedFunction(withName: geometry.intersectionFunctionName)
+            let intersectionFunction = try makeSpecializedFunction(withName: geometry.intersectionFunctionName)
             intersectionFunctions[geometry.intersectionFunctionName] = intersectionFunction
         }
 
-        let raycerFunction = makeSpecializedFunction(withName: "raycerKernel")
+        let raycerFunction = try makeSpecializedFunction(withName: "raycerKernel")
 
-        raycerPipeline = makeRaycerPipelineState(withFunction: raycerFunction, intersectionFunctions: Array<MTLFunction>(intersectionFunctions.values))
+        raycerPipeline = try makeRaycerPipelineState(withFunction: raycerFunction, intersectionFunctions: Array<MTLFunction>(intersectionFunctions.values))
 
         if useIntersectionFunctions {
             let intersectionFunctionTableDescriptor = MTLIntersectionFunctionTableDescriptor()
@@ -295,14 +298,14 @@ class Renderer: NSObject {
 
         // experimental
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try? device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try? binaryArchive?.addRenderPipelineFunctions(descriptor: descriptor)
-        try? binaryArchive?.serialize(to: URL(string: "shader.metallib")!)
+        let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
+        try binaryArchive.serialize(to: URL(string: "shader.metallib")!)
 
-        shaderPipeline = try! device.makeRenderPipelineState(descriptor: descriptor)
+        shaderPipeline = try device.makeRenderPipelineState(descriptor: descriptor)
     }
 
-    private func makeRaycerPipelineState(withFunction raycerFunction: MTLFunction, intersectionFunctions: [MTLFunction]) -> MTLComputePipelineState {
+    private func makeRaycerPipelineState(withFunction raycerFunction: MTLFunction, intersectionFunctions: [MTLFunction]) throws -> MTLComputePipelineState {
         var linkedFunctions: MTLLinkedFunctions?
         var pipeline:        MTLComputePipelineState
 
@@ -318,17 +321,17 @@ class Renderer: NSObject {
 
         // experimental
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try? device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try? binaryArchive?.addComputePipelineFunctions(descriptor: descriptor)
-        try? binaryArchive?.serialize(to: URL(string: "raycer.metallib")!)
+        let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
+        try binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
+        try? binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
 
         let options = MTLPipelineOption()
-        pipeline = try! device.makeComputePipelineState(descriptor: descriptor, options: options, reflection: nil)
+        pipeline = try device.makeComputePipelineState(descriptor: descriptor, options: options, reflection: nil)
 
         return pipeline
     }
 
-    private func makeSpecializedFunction(withName name: String) -> MTLFunction {
+    private func makeSpecializedFunction(withName name: String) throws -> MTLFunction {
         let constants       = MTLFunctionConstantValues()
         var resourcesStride = self.resourcesStride
         var function: MTLFunction
@@ -337,29 +340,29 @@ class Renderer: NSObject {
         constants.setConstantValue(&useIntersectionFunctions, type: .bool, index: 1)
         constants.setConstantValue(&usePerPrimitiveData,      type: .bool, index: 2)
 
-        function = try! library.makeFunction(name: name, constantValues: constants)
+        function = try library.makeFunction(name: name, constantValues: constants)
 
         return function
     }
 
-    private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) -> MTLAccelerationStructure {
+    private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) throws -> MTLAccelerationStructure {
         let sizes                 = device.accelerationStructureSizes(descriptor: descriptor)
-        let accelerationStructure = device.makeAccelerationStructure(size: sizes.accelerationStructureSize)!
+        let accelerationStructure = try device.makeAccelerationStructure(size: sizes.accelerationStructureSize) ?? { throw RendererError.apiReturnedNil("makeAccelerationStructure") }()
 
-        let scratchBuffer         = device.makeBuffer(
+        let scratchBuffer       = try device.makeBuffer(
             length: sizes.buildScratchBufferSize,
-            options: .storageModePrivate)
-        let compactedSizeBuffer   = device.makeBuffer(
+            options: .storageModePrivate) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+        let compactedSizeBuffer = try device.makeBuffer(
             length: MemoryLayout<UInt32>.stride,
-            options: .storageModeShared)!
+            options: .storageModeShared) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
 
-        var commandBuffer         = queue.makeCommandBuffer()!
-        var commandEncoder        = commandBuffer.makeAccelerationStructureCommandEncoder()!
+        var commandBuffer  = try queue.makeCommandBuffer() ?? { throw RendererError.apiReturnedNil("makeCommandBuffer") }()
+        var commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw RendererError.apiReturnedNil("makeAccelerationStructureCommandEncoder") }()
 
         commandEncoder.build(
             accelerationStructure: accelerationStructure,
             descriptor: descriptor,
-            scratchBuffer: scratchBuffer!,
+            scratchBuffer: scratchBuffer,
             scratchBufferOffset: 0)
         commandEncoder.writeCompactedSize(
             accelerationStructure: accelerationStructure,
@@ -372,10 +375,10 @@ class Renderer: NSObject {
         commandBuffer.waitUntilCompleted()
 
         let compactedSize                  = compactedSizeBuffer.contents().load(as: UInt32.self)
-        let compactedAccelerationStructure = device.makeAccelerationStructure(size: Int(compactedSize))!
+        let compactedAccelerationStructure = try device.makeAccelerationStructure(size: Int(compactedSize)) ?? { throw RendererError.apiReturnedNil("makeAccelerationStructure") }()
 
-        commandBuffer  = queue.makeCommandBuffer()!
-        commandEncoder = commandBuffer.makeAccelerationStructureCommandEncoder()!
+        commandBuffer  = try queue.makeCommandBuffer() ?? { throw RendererError.apiReturnedNil("makeCommandBuffer") }()
+        commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw RendererError.apiReturnedNil("makeAccelerationStructureCommandEncoder") }()
         commandEncoder.copyAndCompact(
             sourceAccelerationStructure: accelerationStructure,
             destinationAccelerationStructure: compactedAccelerationStructure)
