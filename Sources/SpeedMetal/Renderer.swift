@@ -71,7 +71,9 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        queue = try device.makeCommandQueue() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandQueue") }()
+        queue = try device.makeCommandQueue() ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandQueue")
+        }()
         let options = MTLCompileOptions()
         library     = try device.makeLibrary(source: shadersMetal, options: options)
 
@@ -333,17 +335,27 @@ class Renderer: NSObject {
 
     private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) throws -> MTLAccelerationStructure {
         let sizes                 = device.accelerationStructureSizes(descriptor: descriptor)
-        let accelerationStructure = try device.makeAccelerationStructure(size: sizes.accelerationStructureSize) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure") }()
+        let accelerationStructure = try device.makeAccelerationStructure(size: sizes.accelerationStructureSize) ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure")
+        }()
 
         let scratchBuffer       = try device.makeBuffer(
             length: sizes.buildScratchBufferSize,
-            options: .storageModePrivate) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
+            options: .storageModePrivate) ?? {
+                throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer")
+            }()
         let compactedSizeBuffer = try device.makeBuffer(
             length: MemoryLayout<UInt32>.stride,
-            options: .storageModeShared) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
+            options: .storageModeShared) ?? {
+                throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer")
+            }()
 
-        var commandBuffer  = try queue.makeCommandBuffer() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer") }()
-        var commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder") }()
+        var commandBuffer  = try queue.makeCommandBuffer() ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer")
+        }()
+        var commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder")
+        }()
 
         commandEncoder.build(
             accelerationStructure: accelerationStructure,
@@ -361,10 +373,16 @@ class Renderer: NSObject {
         commandBuffer.waitUntilCompleted()
 
         let compactedSize                  = compactedSizeBuffer.contents().load(as: UInt32.self)
-        let compactedAccelerationStructure = try device.makeAccelerationStructure(size: Int(compactedSize)) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure") }()
+        let compactedAccelerationStructure = try device.makeAccelerationStructure(size: Int(compactedSize)) ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure")
+        }()
 
-        commandBuffer  = try queue.makeCommandBuffer() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer") }()
-        commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder") }()
+        commandBuffer  = try queue.makeCommandBuffer() ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer")
+        }()
+        commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? {
+            throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder")
+        }()
         commandEncoder.copyAndCompact(
             sourceAccelerationStructure: accelerationStructure,
             destinationAccelerationStructure: compactedAccelerationStructure)

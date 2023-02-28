@@ -45,7 +45,7 @@ struct SMView: UIViewRepresentable {
         do {
             return try Renderer(stage: stage, device: device)
         } catch let error as NSError {
-            errorHandler.record(error, "Die Ursache könnte ein vorübergehender Ressourcenmangel sein. Starte die App nochmal oder boote dein Device.")
+            errorHandler.record(error, "Die Ursache könnte ein vorübergehender Ressourcenmangel sein. Starte die App nochmal oder boote dein Device. Tippe im Display oben rechts auf GitHub und öffne einen Issue mit einer Fehlerbeschreibung, und wie es dazu kam.")
         }
 
         return nil
