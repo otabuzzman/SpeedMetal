@@ -565,6 +565,21 @@ extension Renderer: MTKViewDelegate {
     }
 }
 
+// modeled on the implementation of error definitions in Metal
+let MTLContextErrorDomain = "MTLContextErrorDomain"
+
+struct MTLContextError: NSError {
+    static var errorDomain: String { MTLContextErrorDomain }
+
+    enum Code {
+        case none
+        case apiReturnedNil
+    }
+
+    static var none: Code           { .none }
+    static var apiReturnedNil: Code { .apiReturnedNil }
+}
+
 // https://developer.apple.com/forums/thread/653267
 extension MTLPackedFloat4x3 {
     init(_ matrix: matrix_float4x4) {
