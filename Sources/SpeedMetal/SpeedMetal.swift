@@ -3,7 +3,7 @@ import MetalFX
 import SwiftUI
 
 struct ErrorWrapper {
-    var error: RendererError
+    var error: NSError
     var guidance: String
 }
 
@@ -11,7 +11,7 @@ class ErrorHandler: ObservableObject {
     @Published var current: ErrorWrapper! { didSet { isError = true } }
     @Published var isError = false
 
-    func record(_ error: RendererError, _ guidance: String) {
+    func record(_ error: NSError, _ guidance: String) {
         current = ErrorWrapper(error: error, guidance: guidance)
     }
 }
@@ -44,10 +44,8 @@ struct SMView: UIViewRepresentable {
 
         do {
             return try Renderer(stage: stage, device: device)
-        } catch let error as RendererError {
+        } catch let error as NSError {
             errorHandler.record(error, "Die Ursache könnte ein vorübergehender Ressourcenmangel sein. Starte die App nochmal oder boote dein Device.")
-        } catch {
-            errorHandler.record(RendererError.apiThrewException(error), "Öffne gerne einen Issue falls dir die Fehlerbeschreibung nicht weiterhilft.")
         }
 
         return nil
@@ -379,7 +377,7 @@ struct SMViewError: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler : \(errorHandler.current.error.localizedDescription)", isPresented: $isPresented) {} message: {
-            Text(errorHandler.current.guidance)
+            Text("\(errorHandler.current.error)\n***\n\(errorHandler.current.guidance)") // "\(errorHandler.current.error) \(errorHandler.current.guidance)"
         }
     }
 }

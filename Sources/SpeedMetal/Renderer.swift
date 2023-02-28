@@ -15,20 +15,6 @@ class RendererControl: ObservableObject {
     @Published var drawFunctionAvg: TimeInterval  = 0
 }
 
-enum RendererError: Error {
-    case apiReturnedNil(String)
-    case apiThrewException(Error)
-
-    var localizedDescription: String {
-        switch self {
-        case .apiReturnedNil(let api):
-            return "API gibt nil zurück : \(api)"
-        case .apiThrewException(let exception):
-            return "API meldet Ausnahme : \(exception)"
-        }
-    } 
-}
-
 class Renderer: NSObject {
     private(set) var device: MTLDevice
 
@@ -85,7 +71,7 @@ class Renderer: NSObject {
 
         maxFramesSignal = DispatchSemaphore(value: maxFramesInFlight)
 
-        queue = try device.makeCommandQueue() ?? { throw RendererError.apiReturnedNil("makeCommandQueue") }()
+        queue = try device.makeCommandQueue() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandQueue") }()
         let options = MTLCompileOptions()
         library     = try device.makeLibrary(source: shadersMetal, options: options)
 
@@ -347,17 +333,17 @@ class Renderer: NSObject {
 
     private func makeAccelerationStructure(descriptor: MTLAccelerationStructureDescriptor) throws -> MTLAccelerationStructure {
         let sizes                 = device.accelerationStructureSizes(descriptor: descriptor)
-        let accelerationStructure = try device.makeAccelerationStructure(size: sizes.accelerationStructureSize) ?? { throw RendererError.apiReturnedNil("makeAccelerationStructure") }()
+        let accelerationStructure = try device.makeAccelerationStructure(size: sizes.accelerationStructureSize) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure") }()
 
         let scratchBuffer       = try device.makeBuffer(
             length: sizes.buildScratchBufferSize,
-            options: .storageModePrivate) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: .storageModePrivate) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         let compactedSizeBuffer = try device.makeBuffer(
             length: MemoryLayout<UInt32>.stride,
-            options: .storageModeShared) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: .storageModeShared) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
 
-        var commandBuffer  = try queue.makeCommandBuffer() ?? { throw RendererError.apiReturnedNil("makeCommandBuffer") }()
-        var commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw RendererError.apiReturnedNil("makeAccelerationStructureCommandEncoder") }()
+        var commandBuffer  = try queue.makeCommandBuffer() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer") }()
+        var commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder") }()
 
         commandEncoder.build(
             accelerationStructure: accelerationStructure,
@@ -375,10 +361,10 @@ class Renderer: NSObject {
         commandBuffer.waitUntilCompleted()
 
         let compactedSize                  = compactedSizeBuffer.contents().load(as: UInt32.self)
-        let compactedAccelerationStructure = try device.makeAccelerationStructure(size: Int(compactedSize)) ?? { throw RendererError.apiReturnedNil("makeAccelerationStructure") }()
+        let compactedAccelerationStructure = try device.makeAccelerationStructure(size: Int(compactedSize)) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructure") }()
 
-        commandBuffer  = try queue.makeCommandBuffer() ?? { throw RendererError.apiReturnedNil("makeCommandBuffer") }()
-        commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw RendererError.apiReturnedNil("makeAccelerationStructureCommandEncoder") }()
+        commandBuffer  = try queue.makeCommandBuffer() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeCommandBuffer") }()
+        commandEncoder = try commandBuffer.makeAccelerationStructureCommandEncoder() ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeAccelerationStructureCommandEncoder") }()
         commandEncoder.copyAndCompact(
             sourceAccelerationStructure: accelerationStructure,
             destinationAccelerationStructure: compactedAccelerationStructure)
@@ -566,18 +552,26 @@ extension Renderer: MTKViewDelegate {
 }
 
 // modeled on the implementation of error definitions in Metal
-let MTLContextErrorDomain = "MTLContextErrorDomain"
+let MTLContextDomain = "MTLContextDomain"
 
-struct MTLContextError: NSError {
-    static var errorDomain: String { MTLContextErrorDomain }
+class MTLContextError: NSError {
+    static var errorDomain: String { MTLContextDomain }
 
-    enum Code {
+    enum Code: Int {
         case none
         case apiReturnedNil
     }
 
     static var none: Code           { .none }
     static var apiReturnedNil: Code { .apiReturnedNil }
+
+    init(_ code: Code, userInfo: String) {
+        super.init(domain: MTLContextError.errorDomain, code: code.rawValue, userInfo: [NSLocalizedDescriptionKey: userInfo])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 }
 
 // https://developer.apple.com/forums/thread/653267

@@ -66,23 +66,23 @@ class TriangleGeometry: Geometry {
         indexBuffer = try device.makeBuffer(
             bytes: &indices,
             length: indices.count * MemoryLayout<UInt16>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         vertexPositionBuffer = try device.makeBuffer(
             bytes: &vertices,
             length: vertices.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         vertexNormalBuffer = try device.makeBuffer(
             bytes: &normals,
             length: normals.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         vertexColorBuffer = try device.makeBuffer(
             bytes: &colors,
             length: colors.count * MemoryLayout<vector_float3>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         perPrimitiveDataBuffer = try device.makeBuffer(
             bytes: &triangles,
             length: triangles.count * MemoryLayout<Triangle>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
     }
 
     func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
@@ -244,11 +244,11 @@ class SphereGeometry: Geometry {
         sphereBuffer = try device.makeBuffer(
             bytes: &spheres,
             length: spheres.count * MemoryLayout<Sphere>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
         boundingBoxBuffer = try device.makeBuffer(
             bytes: &boundingBoxes,
             length: spheres.count * MemoryLayout<BoundingBox>.stride,
-            options: [.storageModeShared]) ?? { throw RendererError.apiReturnedNil("makeBuffer") }()
+            options: [.storageModeShared]) ?? { throw MTLContextError(.apiReturnedNil, userInfo: "makeBuffer") }()
     }
 
     func descriptor() -> MTLAccelerationStructureGeometryDescriptor {
