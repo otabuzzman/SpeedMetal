@@ -286,7 +286,7 @@ class Renderer: NSObject {
         let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
         let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
         try binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
-        try binaryArchive.serialize(to: URL(string: "shader.metallib")!)
+        try? binaryArchive.serialize(to: URL(string: "shader.metallib")!)
 
         shaderPipeline = try device.makeRenderPipelineState(descriptor: descriptor)
     }
