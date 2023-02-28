@@ -377,7 +377,7 @@ struct SMViewError: View {
         }
         .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .alert("Es gab einen Fehler : \(errorHandler.current.error.localizedDescription)", isPresented: $isPresented) {} message: {
-            Text("\(errorHandler.current.error)\n***\n\(errorHandler.current.guidance)") // "\(errorHandler.current.error) \(errorHandler.current.guidance)"
+            Text("\(errorHandler.current.error)\n***\n\(errorHandler.current.guidance)")
         }
     }
 }
