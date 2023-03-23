@@ -25,6 +25,7 @@ class SMViewControl: ObservableObject {
         case lineUp
         case framesToRender
         case upscaleFactor
+        case harvestPipelines(URL)
     }
 
     @Published var control = SMViewCommand.none
@@ -79,6 +80,24 @@ struct SMView: UIViewRepresentable {
             renderer.framesToRender = 1
             renderer.upscaleFactor  = smViewControl.upscaleFactor
             smViewControl.framesToRender = 1
+        case .harvestPipelines(let folder):
+            guard
+                folder.startAccessingSecurityScopedResource()
+            else { return }
+            defer { folder.stopAccessingSecurityScopedResource() }
+
+            do {
+                let libFile = folder.appendingPathComponent("speedmetal.metallib")
+                let descriptor = MTLBinaryArchiveDescriptor()
+                let archive = try renderer.device.makeBinaryArchive(descriptor: descriptor)
+                try archive.addRenderPipelineFunctions(descriptor: renderer.shaderDescriptor)
+                try archive.addComputePipelineFunctions(descriptor: renderer.raycerDescriptor)
+                try archive.serialize(to: libFile)
+            } catch let error as NSError {
+                errorHandler.record(error, "Tippe im Display oben rechts auf GitHub und öffne einen Issue mit einer Fehlerbeschreibung, und wie es dazu kam.")
+            }
+
+            return
         }
         smViewControl.control = .none // prevent last command running after Renderer updated Bindings
         rendererControl.drawLoopEnabled = true
@@ -411,6 +430,8 @@ struct FlightControlPanel: View {
         sizeClass == .regular
     }
 
+    @State private var isPresented = false
+    
     var body: some View {
         HStack {
             let iconSize: CGFloat = isRegular ? 44 : 36
@@ -478,6 +499,24 @@ struct FlightControlPanel: View {
                 }
                 .disabled(noUpscaler || drawLoopEnabled)
             }
+            Button {
+                isPresented = true
+            } label: {
+                Image(systemName: "square.and.arrow.down.on.square")
+                    .resizable()
+                    .frame(width: iconSize, height: iconSize)
+            }
+            .disabled(drawLoopEnabled)
+        }
+        .sheet(isPresented: $isPresented) {
+            FolderPicker() { result in
+                switch result {
+                case .success(let folder):
+                    smViewControl.control = .harvestPipelines(folder)
+                default:
+                    break
+                }
+            }
         }
     }
 }
@@ -498,6 +537,52 @@ struct UpscalerIcon: View {
                     .frame(width: w / 2.0, height: h / 2.0)
                     .offset(x: w / 2.0 * 0.72, y: -h / 2.0 * 0.72)
             }
+        }
+    }
+}
+
+enum FolderPickerError: Error {
+    case canceled
+    case unknown
+}
+
+struct FolderPicker: UIViewControllerRepresentable {
+    var completion: ((Result<URL, FolderPickerError>) -> Void)?
+    
+    func makeUIViewController(context: UIViewControllerRepresentableContext<FolderPicker>) -> UIDocumentPickerViewController {
+        let controller = UIDocumentPickerViewController(forOpeningContentTypes: [.folder])
+        controller.delegate = context.coordinator
+        controller.allowsMultipleSelection = false
+        
+        return controller
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: UIViewControllerRepresentableContext<FolderPicker>) {
+    }
+    
+    func makeCoordinator() -> FolderPickerCoordinator {
+        FolderPickerCoordinator(completion)
+    }
+}
+
+class FolderPickerCoordinator: NSObject, UINavigationControllerDelegate {
+    var completion: ((Result<URL, FolderPickerError>) -> Void)?
+    
+    init(_ completion: ((Result<URL, FolderPickerError>) -> Void)?) {
+        self.completion = completion
+    }
+}
+
+extension FolderPickerCoordinator: UIDocumentPickerDelegate {
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        completion?(.failure(.canceled))
+    }
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        if let folder = urls.first {
+            completion?(.success(folder))
+        } else {
+            completion?(.failure(.unknown))
         }
     }
 }

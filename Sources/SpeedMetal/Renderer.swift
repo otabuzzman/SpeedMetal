@@ -52,7 +52,9 @@ class Renderer: NSObject {
     private var instanceAccelerationStructure:   MTLAccelerationStructure!
     private var primitiveAccelerationStructures: NSMutableArray!
 
+    private(set) var raycerDescriptor: MTLComputePipelineDescriptor!
     private var raycerPipeline: MTLComputePipelineState!
+    private(set) var shaderDescriptor: MTLRenderPipelineDescriptor!
     private var shaderPipeline: MTLRenderPipelineState!
 
     private var intersectionFunctionTable: MTLIntersectionFunctionTable!
@@ -279,18 +281,12 @@ class Renderer: NSObject {
             }
         }
 
-        let descriptor = MTLRenderPipelineDescriptor()
-        descriptor.vertexFunction   = library.makeFunction(name: "copyVertex")
-        descriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
-        descriptor.colorAttachments[0].pixelFormat = .rgba16Float
+        shaderDescriptor = MTLRenderPipelineDescriptor()
+        shaderDescriptor.vertexFunction   = library.makeFunction(name: "copyVertex")
+        shaderDescriptor.fragmentFunction = library.makeFunction(name: "copyFragment")
+        shaderDescriptor.colorAttachments[0].pixelFormat = .rgba16Float
 
-        // experimental
-        let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try binaryArchive.addRenderPipelineFunctions(descriptor: descriptor)
-        try? binaryArchive.serialize(to: URL(string: "shader.metallib")!)
-
-        shaderPipeline = try device.makeRenderPipelineState(descriptor: descriptor)
+        shaderPipeline = try device.makeRenderPipelineState(descriptor: shaderDescriptor)
     }
 
     private func makeRaycerPipelineState(withFunction raycerFunction: MTLFunction, intersectionFunctions: [MTLFunction]) throws -> MTLComputePipelineState {
@@ -302,19 +298,13 @@ class Renderer: NSObject {
             linkedFunctions!.functions = intersectionFunctions
         }
 
-        let descriptor = MTLComputePipelineDescriptor()
-        descriptor.computeFunction                                 = raycerFunction
-        descriptor.linkedFunctions                                 = linkedFunctions
-        descriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
-
-        // experimental
-        let binaryArchiveDescriptor = MTLBinaryArchiveDescriptor()
-        let binaryArchive = try device.makeBinaryArchive(descriptor: binaryArchiveDescriptor)
-        try binaryArchive.addComputePipelineFunctions(descriptor: descriptor)
-        try? binaryArchive.serialize(to: URL(string: "raycer.metallib")!)
+        raycerDescriptor = MTLComputePipelineDescriptor()
+        raycerDescriptor.computeFunction                                 = raycerFunction
+        raycerDescriptor.linkedFunctions                                 = linkedFunctions
+        raycerDescriptor.threadGroupSizeIsMultipleOfThreadExecutionWidth = true
 
         let options = MTLPipelineOption()
-        pipeline = try device.makeComputePipelineState(descriptor: descriptor, options: options, reflection: nil)
+        pipeline = try device.makeComputePipelineState(descriptor: raycerDescriptor, options: options, reflection: nil)
 
         return pipeline
     }
