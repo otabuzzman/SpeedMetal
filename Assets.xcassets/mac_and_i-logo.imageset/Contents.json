@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "mac_and_i-logo.jpeg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

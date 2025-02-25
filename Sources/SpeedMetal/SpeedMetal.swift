@@ -310,7 +310,7 @@ struct SocialMediaPanel: View {
         HStack {
             let iconSize: CGFloat = isRegular ? 44 : 36
             Group {
-                Link(destination: URL(string: "https://www.heise.de/mac-and-i/2023/2/")!) {
+                Link(destination: URL(string: "https://www.heise.de/mac-and-i/")!) {
                     Image("mac_and_i-logo")
                         .resizable()
                         .clipShape(Circle())
