@@ -455,6 +455,8 @@ extension Renderer: MTKViewDelegate {
     }
 
     func draw(in view: MTKView) {
+        guard let currentDrawable = view.currentDrawable else { return }
+ 
         maxFramesSignal.wait()
 
         let t0 = CFAbsoluteTimeGetCurrent()
@@ -466,9 +468,12 @@ extension Renderer: MTKViewDelegate {
             (raycerHeight + threadsPerThreadgroup.height - 1) / threadsPerThreadgroup.height, 1)
 
         let commandBuffer = queue.makeCommandBuffer()!
-        commandBuffer.addCompletedHandler() { [self] _ in
+        commandBuffer.addCompletedHandler { [self] _ in
             maxFramesSignal.signal()
             commandBufferSum += commandBuffer.gpuEndTime - commandBuffer.gpuStartTime
+        }
+        commandBuffer.addScheduledHandler { _ in
+            currentDrawable.present()
         }
 
         let computeEncoder = commandBuffer.makeComputeCommandEncoder()!
@@ -523,25 +528,21 @@ extension Renderer: MTKViewDelegate {
             blitEncoder.endEncoding()
         }
 
-        if let currentDrawable = view.currentDrawable {
-            let renderPassDescriptor = MTLRenderPassDescriptor()
-            renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
-            renderPassDescriptor.colorAttachments[0].loadAction = .clear
-            renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
-
-            let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
-            renderEncoder.setRenderPipelineState(shaderPipeline)
-            if upscaleFactor > 1.0 {
-                renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
-            } else {
-                renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
-            }
-            renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-
-            renderEncoder.endEncoding()
-
-            commandBuffer.present(currentDrawable)
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        renderPassDescriptor.colorAttachments[0].texture    = currentDrawable.texture
+        renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 1.0)
+        
+        let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)!
+        renderEncoder.setRenderPipelineState(shaderPipeline)
+        if upscaleFactor > 1.0 {
+            renderEncoder.setFragmentTexture(upscaledTarget, index: 0)
+        } else {
+            renderEncoder.setFragmentTexture(raycerTargets[0], index: 0)
         }
+        renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+        
+        renderEncoder.endEncoding()
 
         commandBuffer.commit()
 
